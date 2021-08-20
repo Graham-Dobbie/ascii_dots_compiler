@@ -6,6 +6,18 @@
 
 namespace tokenizer {
 
+
+struct Token {
+
+    public:
+
+    Token(std::string type, std::string value);
+
+    std::string type;
+    std::string value;
+
+};
+
 class Tokenizer {
 
     public:
@@ -14,8 +26,7 @@ class Tokenizer {
 
     std::string _string;
 
-    
-    
+    Token getNextToken();
 
 };
 }
