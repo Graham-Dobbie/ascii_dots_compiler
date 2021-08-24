@@ -1,5 +1,5 @@
 #include <tokenizer.hpp>
-#include <iostream>
+
 
 using namespace std;
 using namespace tokenizer;
@@ -21,19 +21,26 @@ int main(){
     std::map<std::string, std::string> regex_map;
     regex_map.insert(std::pair<std::string, std::string> ("NUMBER","^\\d+"));
     regex_map.insert(std::pair<std::string, std::string> ("SPACE","^\\s+"));
-    regex_map.insert(std::pair<std::string, std::string> ("WORD","^\\w+"));
+    regex_map.insert(std::pair<std::string, std::string> ("IDENTIFIER","^([a-zA-Z]+((\\w+)|(\\d+))?)|(\\d+([a-zA-Z_])((\\w+)|(\\d+))?)"));
+    regex_map.insert(std::pair<std::string, std::string> ("OPERATOR","^[\\+\\/\\=\\*\\^\\%\\-]"));
+    regex_map.insert(std::pair<std::string, std::string> ("PRESEDENCE_SIGNIFIER","^[\\(\\)\\[\\]]"));
 
-    lexer.setString((string)"1220 abc");
-    lexer.setTokenRegex(regex_map);
+    // string responce;
+    // cout << ">> ";
+    // cin >> responce;
+    // cout << endl;
+    // lexer.setString((string)"(x+4)/7");
+    // lexer.setTokenRegex(regex_map);
 
-    Token t = lexer.getNextToken();
+    // Token t = lexer.getNextToken();
 
 
-    while(!t.isEnd()){
-        print(t);
-        t = lexer.getNextToken();
-    }
+    // while(!t.isEnd()){
+    //     print(t);
+    //     t = lexer.getNextToken();
+    // }
     
+    regex_map[0];
     
 
 }

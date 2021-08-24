@@ -10,10 +10,8 @@ add_executable(${PROJECT_NAME} main.cpp)
 
 add_subdirectory(parser)
 
-add_subdirectory(tokenizer)
+target_include_directories(${PROJECT_NAME} PUBLIC parser)
 
-target_include_directories(${PROJECT_NAME} PUBLIC parser/ tokenizer/)
+target_link_directories(${PROJECT_NAME} PUBLIC parser)
 
-target_link_directories(${PROJECT_NAME} PRIVATE parser/ tokenizer/)
-
-target_link_libraries(${PROJECT_NAME} parser tokenizer) 
+target_link_libraries(${PROJECT_NAME} parser) 
