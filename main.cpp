@@ -1,18 +1,11 @@
-#include <tokenizer.hpp>
+#include <parsetree.hpp>
+
+
 
 
 using namespace std;
-using namespace tokenizer;
+using namespace parsetree;
 
-void print(Token t){
-    
-    map<string,string> map = t.data;
-    
-    for (auto it= map.begin(); it!=map.end(); ++it){
-    std::cout << it->first << ":" << it->second << "\n";
-    }
-    std::cout << endl;
-}
 
 int main(){
 
@@ -36,11 +29,11 @@ int main(){
 
 
     // while(!t.isEnd()){
-    //     print(t);
+    //     t.print();
     //     t = lexer.getNextToken();
     // }
     
-    regex_map[0];
-    
+    Grammer g = Grammer("E::<E>+<T>|<E>-<T>|<T>|");
+    g.print();
 
 }

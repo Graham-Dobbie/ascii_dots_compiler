@@ -8,10 +8,10 @@ include(CheckIPOSupported)
 
 add_executable(${PROJECT_NAME} main.cpp)
 
-add_subdirectory(parser)
+add_subdirectory(parsetree)
 
-target_include_directories(${PROJECT_NAME} PUBLIC parser)
+target_include_directories(${PROJECT_NAME} PUBLIC parsetree)
 
-target_link_directories(${PROJECT_NAME} PUBLIC parser)
+target_link_directories(${PROJECT_NAME} PUBLIC parsetree)
 
-target_link_libraries(${PROJECT_NAME} parser) 
+target_link_libraries(${PROJECT_NAME} parsetree) 
