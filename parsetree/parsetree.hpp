@@ -7,9 +7,14 @@
 #include <map>
 #include <regex>
 #include <iterator>
+#include <fstream>
+#include <unordered_map>
 
 
 namespace parsetree{
+
+
+
 // Token class stores the type and value the tokenizer scans from the source code
 class Token {
 
@@ -21,7 +26,8 @@ class Token {
 
     void print();
 
-    std::map<std::string, std::string> data;
+    std::string type;
+    std::string value;
 
     bool isEnd();
 };
@@ -29,12 +35,17 @@ class Token {
 
 // The Tokenizer class scans source code and separates it into tokens
 class Tokenizer {
-
-    public:
+    
+    private:
 
     int _cursor = 0;
     std::string _string;
-    std::map<std::string, std::regex> regex_map;
+    std::map<std::string, std::regex> _regex_map;
+
+    public:
+
+    Tokenizer();
+    Tokenizer(std::map<std::string, std::regex> regex_map, std::string m);
 
     void setString(std::string m); // Gives sources code to tokenizer
 
@@ -49,79 +60,55 @@ class Tokenizer {
 
 
 
-class Node {
+
+struct Character
+{   
     public:
-    Node (Node* parent_node_ptr, std::string type, std::map<std::string, Node*> children);
-    
+    Character();
+    Character(std::string type, std::string value);
+
+    bool operator == (const Character& c);
+    bool operator == (const Token& t);
+
     std::string type;
-    std::map<std::string, Node*> children;
-
-    std::map<std::string, Node*>  getChildren();
-    std::string getType();
-
-    void print(int depth);
-
-    private:
-    Node* _parent_node_ptr;
+    std::string value;
 };
 
-
-
-
-class Tree{
-    private:
-
-    Node _root_node;
-    std::vector<Grammar> _G;
-    std::map<std::string, std::string> _regex_map;
-    
-    Tokenizer _lexer();
-
-    Node _disect(Token token_1, Token token_2, Rule r);
-
-    public:
-
-    Tree(std::vector<Grammar> grammar, std::map<std::string, std::string> regex_map, std::string raw_text);
-
-    void parse();
-
-    Node getTreeHeader();
-
-    void readF(std::string src);
-
-    void writeF(std::string dst = "parser_cst.json");
-
-};
-    
-
-
-
-
+// A singular rule for the grammar of an expression
 class Rule {
 
-    private:
-
-    std::vector<std::pair<std::string, std::string>>_data;
-
     public:
 
-    Rule(std::string bnf_string);
+    std::vector<Character>_data;
+
+    Rule();
+    Rule(std::string bnf_string = "");
+    Rule(std::vector<Character> charactors);
+
+    bool operator == (const Rule& n);
 
     void print();
 
-    std::vector<std::pair<std::string, std::string>>::iterator begin();
-    std::vector<std::pair<std::string, std::string>>::iterator end();
+    std::vector<Character>::iterator begin();
+    std::vector<Character>::iterator end();
 
 
 };
 
+
+// Grammar for a single expression
 class Grammar {
+    
+
+    public:
     std::string _name;
     std::vector<Rule> _rules;
 
-    public:
-
+    Grammar();
     Grammar(std::string bnf_string);
+    Grammar(std::string name, std::vector<Rule> rules);
+
+    bool operator<(const Grammar& g);
 
     void print();
 
@@ -131,6 +118,101 @@ class Grammar {
 
 };
 
-}
+// Is a parse tree node that stores relevant information
+class Node {
+    public:
+    Node();
+    Node (Node* parent_node_ptr, std::string type, std::vector<Node*> children);
+    
+    std::string type;
+    std::vector<Node*> children;
+
+    std::vector<Node*>  getChildren();
+    std::string getType();
+
+    bool isNull();
+
+    void print(int depth);
+
+    Node* _parent_node_ptr;
+};
+
+
+// Parse Tree class condains a root node and methods to parse different tokens
+class ConcreteSyntacticalTree{
+    private:
+
+    Node* _root_node;
+    Node* _header_node;
+
+    std::vector<Grammar> _G;
+    Grammar _root_grammar;
+
+    
+
+    std::map<Grammar,Grammar> _a_to_a_prime;
+
+    std::map<std::string, std::string> _regex_map;
+    Tokenizer _lexer;
+
+    int _current_token;
+    std::vector<Token> _tokens;
+
+
+
+    Node* _parse(Grammar G, Character C, int token_number);
+
+    Node _parseHelper(Token token_1, Token token_2, Token token_help, Grammar G, Rule R);
+
+    void _trimTree(Node* node);
+
+    Node* _makeDataNode(Token t);
+
+    void _makeGrammar();
+
+    void _helpPrint(Node start_node, int depth);
+
+    void _merge_primes(Node* node);
+
+    void _rid_epsilons(Node* node);
+    
+
+    public:
+
+    ConcreteSyntacticalTree();
+    ConcreteSyntacticalTree(std::vector<Grammar> grammar, std::map<std::string, std::string> regex_map, std::string raw_text);
+
+    Grammar getGrammar (Character c);
+
+    void makeTree();
+
+
+
+    Node* getTreeHeader();
+
+    void readF(std::string src);
+
+    void writeF(std::string dst = "parser_cst.json");
+
+    void print();
+
+    void print_grammar();
+    
+
+};
+
+
+bool operator < (const Grammar& g1, const Grammar& g2);
+
+// class AbstractSyntacticalTree {
+
+
+// };
+
+
+
+};
+
+
 
 #endif 

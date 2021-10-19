@@ -2,13 +2,19 @@
 
 namespace parsetree {
 
+Token::Token(){
+    this->type = "END";
+    this->value = "";
+}
+
 Token::Token(std::string type, std::string value){
-    this->data.insert(std::pair<std::string, std::string>("type", type));
-    this->data.insert(std::pair<std::string, std::string>("value", value));
+
+    this->type = type;
+    this->value = value;
 };
 
 bool Token::isEnd(){
-    if (this->data["type"] == "END"){
+    if (this->type == "END"){
         return true;
     }
     else{
@@ -17,13 +23,20 @@ bool Token::isEnd(){
 }
 
 void Token::print(){
-    std::map<std::string,std::string> map = this->data;
     
-    for (auto it= map.begin(); it!=map.end(); ++it){
-    std::cout << it->first << ":" << it->second << "\n";
-    }
+    std::cout << this->type << ":" << this->value << "\n";
+
     std::cout << std::endl;
 }
+
+Tokenizer::Tokenizer(std::map<std::string, std::regex> regex_map, std::string m) {
+    this->_regex_map = regex_map;
+    this->_string = m;
+}
+
+Tokenizer::Tokenizer() {}
+
+
 
 Token Tokenizer::getNextToken(){
     this->_string = this->_string.substr(this->_cursor, -1);
@@ -37,7 +50,7 @@ Token Tokenizer::getNextToken(){
 
         bool done = false;
 
-        for (auto it= regex_map.begin(); it!=regex_map.end(); ++it){
+        for (auto it= _regex_map.begin(); it!=_regex_map.end(); ++it){
 
             std::string type = it->first;
             std::regex_search(_string, matches, it->second);
@@ -80,12 +93,16 @@ void Tokenizer::setTokenRegex(std::map<std::string, std::string> map){
     for (auto it= map.begin(); it!=map.end(); ++it){
         std::string type = it->first;
         std::regex regex = std::regex(it->second);
-        this->regex_map.insert(std::pair<std::string, std::regex> (type,regex));
+        this->_regex_map.insert(std::pair<std::string, std::regex> (type,regex));
     }
 }
 
+Node::Node(){
+    this->_parent_node_ptr = nullptr;
+    this->type = "NULL";
+}
 
-Node::Node(Node* parent_node_ptr, std::string type, std::map<std::string, Node*> children){
+Node::Node(Node* parent_node_ptr, std::string type, std::vector<Node*> children){
     this->_parent_node_ptr = parent_node_ptr;
     this->type = type;
     this->children = children;
@@ -93,16 +110,65 @@ Node::Node(Node* parent_node_ptr, std::string type, std::map<std::string, Node*>
 
 void Node::print(int depth){
     for (int i = 0; i < depth; i++){
-        std::cout << "\t";
+        std::cout << "--";
     }
     std::cout << (std::string)this->type << ":" << std::endl;
-    for (auto itr = children.begin(); itr != children.end(); itr++){
-        Node* child = itr->second;
+    for (int i =0; i < this->children.size(); i++){
+        Node* child = this->children[i];
         child->print(depth+1);
     }
 
 };
 
+bool Node::isNull(){
+    if(this->type == "NULL"){
+        return true;
+    }
+    else{
+        return false;
+    }
+}
+
+Character::Character(){}
+Character::Character(std::string type, std::string value){
+    this->type = type;
+    this->value = value;
+}
+
+bool Character::operator==(const Character& c){
+    
+    if (this->type == "RAW"){
+        
+        if (this->value == c.value){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    else{
+        return false;   
+    }
+};
+
+bool Character::operator==(const Token& t){
+    
+    if (this->type == "RAW"){
+        if ((this->value == t.type) or (this->value == t.value)){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    else{
+        
+        return false;
+    }
+};
+
+
+Rule::Rule(){}
 
 Rule::Rule(std::string bnf_string){
 
@@ -111,44 +177,69 @@ Rule::Rule(std::string bnf_string){
 
     std::map<std::string, std::string> regex_map;
     regex_map.insert(std::pair<std::string, std::string> ("LINK","^<\\w+>"));
-    regex_map.insert(std::pair<std::string, std::string> ("RAW","^([a-zA-Z]|[\\+\\/\\=\\*\\^\\%\\-])+"));
+    regex_map.insert(std::pair<std::string, std::string> ("RAW","^([a-zA-Z]|[\\+\\/\\=\\*\\^\\%\\-\\(\\)])+"));
 
     lexer.setTokenRegex(regex_map);
 
     Token t = lexer.getNextToken();
 
-    
-
     while(!t.isEnd()){
-        std::string bnf_token = t.data["value"];
-        if (t.data["type"] == "LINK"){
-            std::pair<std::string, std::string> d("LINK" , bnf_token.substr(1,bnf_token.size()-2));
-            this->_data.push_back(d);
+        std::string bnf_token = t.value;
+        if (t.type == "LINK"){
+            Character c("LINK" , bnf_token.substr(1,bnf_token.size()-2));
+            this->_data.push_back(c);
         }
-        else if(t.data["type"] == "RAW"){
-            std::pair<std::string, std::string> d("RAW" , bnf_token);
-            this->_data.push_back(d);
+        else if(t.type == "RAW"){
+            Character c("RAW" , bnf_token);
+            this->_data.push_back(c);
         }
         else{
-            std::pair<std::string, std::string> d("NULL","");
-            this->_data.push_back(d);
+            Character c("NULL","");
+            this->_data.push_back(c);
         }
         t = lexer.getNextToken();
     }
 
 }
 
+bool Rule::operator==(const Rule& n){
+    auto itr = this->begin();
+    if (itr->type == "LINK"){
+        return false;
+    }
+    Rule n0 = n;
+    auto itr0 = n0.begin();
+    while (itr != this->end()){
+        if(itr.base() != itr0.base()){
+            return false;
+        }
+        itr++;
+        itr0++;
+    }
+     
+    return true;
+};
+
+Rule::Rule(std::vector<Character> characters){
+    this->_data = characters;
+}
+
 void Rule::print(){
     for (int i = 0; i<this->_data.size(); i++){
-        std::cout << this->_data[i].first << " : " << this->_data[i].second << std::endl;
+        std::cout << this->_data[i].type << " : " << this->_data[i].value << std::endl;
     }
 }
 
-std::vector<std::pair<std::string, std::string>>::iterator Rule::begin(){
+std::vector<Character>::iterator Rule::begin(){
     return this->_data.begin();
 }
-std::vector<std::pair<std::string, std::string>>::iterator Rule::end(){
+std::vector<Character>::iterator Rule::end(){
     return this->_data.end();
+}
+
+Grammar::Grammar(){
+    this->_name = "NULL";
+    this->_rules.push_back(Rule(""));
 }
 
 Grammar::Grammar(std::string bnf_string){
@@ -157,19 +248,19 @@ Grammar::Grammar(std::string bnf_string){
 
     std::map<std::string, std::string> regex_map;
     regex_map.insert(std::pair<std::string, std::string> ("NAME","^\\w+::"));
-    regex_map.insert(std::pair<std::string, std::string> ("RULE","^(<\\w+>|([a-zA-Z]+((\\w+)|(\\d+))?)|(\\d+([a-zA-Z_])((\\w+)|(\\d+))?)|[\\+\\/\\=\\*\\^\\%\\-]|\\s+)+\\|"));
+    regex_map.insert(std::pair<std::string, std::string> ("RULE","^(<\\w+>|([a-zA-Z]+((\\w+)|(\\d+))?)|(\\d+([a-zA-Z_])((\\w+)|(\\d+))?)|[\\+\\/\\=\\*\\^\\%\\-\\(\\)]|\\s+)+\\|"));
 
     lexer.setTokenRegex(regex_map);
 
     Token t = lexer.getNextToken();
 
     while(!t.isEnd()){
-        std::string bnf_token = t.data["value"];
-        if (t.data["type"] == "NAME"){
+        std::string bnf_token = t.value;
+        if (t.type == "NAME"){
             std::string d(bnf_token.substr(0,bnf_token.size()-2));
             this->_name = d;
         }
-        else if(t.data["type"] == "RULE"){
+        else if(t.type == "RULE"){
             std::string d(bnf_token.substr(0,bnf_token.size()-1));
             this->_rules.push_back(Rule(d));
         }
@@ -180,6 +271,15 @@ Grammar::Grammar(std::string bnf_string){
     }
 }
 
+Grammar::Grammar(std::string name, std::vector<Rule> rules){
+    this->_name = name;
+    this->_rules = rules;
+}
+
+bool Grammar::operator<(const Grammar& g){
+    return this->_name.size() < g._name.size();
+}
+
 void Grammar::print(){
     std::cout << "<" <<this->_name << ">"<< std::endl;
     for ( int i = 0; i < _rules.size(); i++){
@@ -187,7 +287,6 @@ void Grammar::print(){
         this->_rules[i].print();
         std::cout << std::endl;
     }
-
 }
 
 std::vector<Rule>::iterator Grammar::begin(){
@@ -198,11 +297,295 @@ std::vector<Rule>::iterator Grammar::end(){
     return this->_rules.end();
 }
 
+ConcreteSyntacticalTree::ConcreteSyntacticalTree(){
+    this->_lexer.setString("");
+    std::map<std::string, std::string> regex;
+    this->_lexer.setTokenRegex(regex);
+    Node *n = new Node();
+    this->_root_node = n;
 
-Tree::Tree(std::vector<Grammar> grammar, std::map<std::string, std::string> regex_map, std::string raw_text){
-    this->_lexer().setString(raw_text);
+    this->_a_to_a_prime;
+
+    this->_root_grammar = Grammar();
+    this->_header_node = this->_root_node;
+
+    this->_tokens.push_back(Token("END", ""));
+
 }
 
+
+ConcreteSyntacticalTree::ConcreteSyntacticalTree(std::vector<Grammar> grammar, std::map<std::string, std::string> regex_map, std::string raw_text){
+    raw_text = "<start>" + raw_text;
+    this->_lexer.setString(raw_text);
+
+    this->_lexer.setTokenRegex(regex_map);
+
+    Node *n = new Node();
+    this->_root_node = n;
+
+    this->_G = grammar;
+
+    this->_root_grammar = this->_G[0];
+    this->_header_node = this->_root_node;
+
+    this->_current_token = 0;
+
+    this->_tokens.push_back(this->_lexer.getNextToken());
+
+    this->_a_to_a_prime;
+
+    this->_makeGrammar();
 }
 
+Node* ConcreteSyntacticalTree::_makeDataNode(Token t){
+    Node *child_node = new Node();
+        child_node->_parent_node_ptr = this->_header_node;
+        child_node->type = t.type;
+
+        Node *data_node = new Node();
+        data_node->_parent_node_ptr = child_node;
+        data_node->type = t.value;
+
+        child_node->children.push_back(data_node);
+        return child_node;
+}
+
+Node* ConcreteSyntacticalTree::_parse(Grammar G, Character C, int t ){
+    int initial_token = t;
+    if (C.type == "RAW"){
+        if (C == this->_tokens[this->_current_token]){
+            Node* n = _makeDataNode(this->_tokens[this->_current_token]);
+            this->_current_token++;
+            if (this->_current_token >= this->_tokens.size()-1){
+                this->_tokens.push_back( this->_lexer.getNextToken());
+            }
+            return n;
+            
+        }
+        else{
+            return new Node();
+        }
+    }else if (C.type == "LINK"){
+        std::vector<Node*> children;
+
+        Node* return_node = new Node();
+
+        return_node->type = G._name;
+
+        Node* old_header = this->_header_node;
+        return_node->_parent_node_ptr = old_header;
+
+        this->_header_node = return_node;
+        
+        for(int i = 0; i < G._rules.size(); i++){
+            Rule r = G._rules[i];
+            children.clear();
+
+            int j = 0;
+            bool finished = false;
+
+            while ((j <=  r._data.size()-1) and (!finished)){
+                
+                Character c_temp = r._data[j];
+                Grammar g_temp = this->getGrammar(c_temp);
+                
+
+                Node* n_temp = this->_parse(g_temp, c_temp, this->_current_token);
+                if(n_temp->isNull()){
+                    children.clear();
+                    finished = true;
+                    this->_current_token = initial_token;
+                }
+                else{
+                    children.push_back(n_temp);
+                }
+                j++;
+            }
+
+            if (children.size() != 0){
+                this->_header_node = old_header;
+                return_node->children = children;
+                return return_node;
+            }
+        }
+
+        return new Node();
+
+    }
+    else if (C.type == "EPSILON"){
+        std::vector<Node*> c;
+        return new Node(this->_header_node, "END", c);
+    }
+    else{
+        return new Node();
+    }
     
+}
+
+Grammar ConcreteSyntacticalTree::getGrammar(Character c){
+    for(int i = 0; i < this->_G.size(); i++){
+        if (this->_G[i]._name == c.value){
+            return this->_G[i];
+        }
+
+    }
+    return Grammar("");
+}
+
+
+
+
+void ConcreteSyntacticalTree::makeTree(){
+    Character root_char = Character("LINK", this->_root_grammar._name);
+
+    Node* n = _parse(this->_root_grammar, root_char, 0);
+
+    _trimTree(n); 
+
+    this->_root_node = n;
+}
+
+
+void ConcreteSyntacticalTree::_makeGrammar(){
+    std::vector<Grammar> temp_grammar; //make grammer to be returned
+    int id = 0;
+
+    for (int i = 0; i < _G.size(); i++){
+        Grammar g = _G[i];
+
+        std::vector<Rule> A_alpha_rules; // reccursive rules
+        std::vector<Rule> beta_rules;  //non recursive rules
+
+        for (int i = 0; i < g._rules.size(); i++){ //detects reccursive rule and spilts them
+
+            Rule r = g._rules[i];
+
+            if((r._data[0].type == "LINK") and (r._data[0].value == g._name)){
+                A_alpha_rules.push_back(r);
+            }
+            else{
+                beta_rules.push_back(r);
+            }
+        }
+
+        std::vector<Rule> a_rules;
+        std::vector<Rule> a_prime_rules;
+
+        for(int i = 0; i < A_alpha_rules.size(); i++){ //turns recursive rules into alphas and removes recursion
+
+            Rule alpha = A_alpha_rules[i];
+            alpha._data.erase(alpha._data.begin());
+            a_prime_rules.push_back(alpha);
+            
+        }
+
+        Character e("EPSILON", "NULL"); //adds an end to the grammar
+        std::vector<Character> ep;
+        ep.push_back(e);
+        Rule epsilon(ep);
+        a_prime_rules.push_back(epsilon);
+
+        for(int j = 0; j < beta_rules.size(); j++){ // create the initial entry to the grammar with the beta rules
+                Rule a = beta_rules[j];
+                a._data.push_back(Character("LINK", std::to_string(id)));
+                a_rules.push_back(a);
+                
+        }
+
+        Grammar A(g._name, a_rules);
+        Grammar A_prime(std::to_string(id), a_prime_rules);
+
+        temp_grammar.push_back(A);
+        temp_grammar.push_back(A_prime);
+
+        std::pair< Grammar, Grammar > pair(A, A_prime);
+
+        this->_a_to_a_prime.insert(pair);
+
+        id++;
+    }
+
+    this->_G = temp_grammar;
+}
+
+void ConcreteSyntacticalTree::_merge_primes(Node* node){
+        std::vector<Node*> c = node->children;
+
+    Grammar h_g;
+    Grammar h_p_g;
+
+    for (auto itr = this->_a_to_a_prime.begin(); itr != this->_a_to_a_prime.end(); itr++ ){
+        if(node->type == itr->first._name){
+          h_g = itr->first;
+          h_p_g = itr->second;
+        }
+
+    }
+
+    for(int i = 0; i < c.size(); i++){
+        
+        if (c.size() > 0){
+            Node* child = c[i];
+
+            if(child->type == h_p_g._name){
+                node->children.erase(node->children.begin() + i);
+
+                for(int j = 0; j < child->children.size(); j++){
+                    node->children.push_back(child->children[j]);
+                }
+            }
+
+            _trimTree(child);
+        }
+
+    }
+}
+
+void ConcreteSyntacticalTree::_rid_epsilons(Node* node){
+    
+    Node* parent = node->_parent_node_ptr;
+
+    if (node->children.size() > 0){
+        Node* child = node->children[0];
+
+        if ((child->type == "END") or (node->type == "END")){
+
+            for(int i = 0; i < parent->children.size(); i++){
+
+                if(node->type == parent->children[i]->type){
+
+                    parent->children.erase(parent->children.begin() + i);
+                }
+            }       
+        }
+   }
+}
+
+void ConcreteSyntacticalTree::_trimTree(Node* node){
+    this->_merge_primes(node);
+    this->_rid_epsilons(node);
+}
+
+
+Node* ConcreteSyntacticalTree::getTreeHeader(){
+    return this->_root_node;
+}
+
+
+void ConcreteSyntacticalTree::print(){
+    this->_root_node->print(0);
+}
+
+
+void ConcreteSyntacticalTree::print_grammar(){
+    for(int i = 0; i < this->_G.size(); i++){
+        _G[i].print();
+    }
+}
+
+
+bool operator < (const Grammar& g1, const Grammar& g2){
+    return g1._name.size() < g2._name.size();
+}
+
+}
