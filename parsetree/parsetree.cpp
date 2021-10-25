@@ -508,7 +508,7 @@ void ConcreteSyntacticalTree::_makeGrammar(){
     this->_G = temp_grammar;
 }
 
-void ConcreteSyntacticalTree::_merge_primes(Node* node){
+void ConcreteSyntacticalTree::_mergePrimes(Node* node){
         std::vector<Node*> c = node->children;
 
     Grammar h_g;
@@ -535,17 +535,27 @@ void ConcreteSyntacticalTree::_merge_primes(Node* node){
                 }
             }
 
-            _trimTree(child);
+            _mergePrimes(child);
         }
 
     }
 }
 
-void ConcreteSyntacticalTree::_rid_epsilons(Node* node){
+void ConcreteSyntacticalTree::_ridEpsilons(Node* node){
     
     Node* parent = node->_parent_node_ptr;
 
-    if (node->children.size() > 0){
+    if ( node->type == "END" ){
+        for(int i = 0; i < parent->children.size(); i++){
+
+            if(node->type == parent->children[i]->type){
+                
+                parent->children.erase(parent->children.begin() + i);
+            }
+        }
+    }
+
+    else if (node->children.size() > 0 ){
         Node* child = node->children[0];
 
         if ((child->type == "END") or (node->type == "END")){
@@ -558,12 +568,18 @@ void ConcreteSyntacticalTree::_rid_epsilons(Node* node){
                 }
             }       
         }
-   }
+
+        else{
+            for(int i = 0; i < node->children.size(); i++){
+                _ridEpsilons(node->children[i]);
+            }
+        }
+    }
 }
 
 void ConcreteSyntacticalTree::_trimTree(Node* node){
-    this->_merge_primes(node);
-    this->_rid_epsilons(node);
+    this->_mergePrimes(node);
+    this->_ridEpsilons(node);
 }
 
 
@@ -577,7 +593,7 @@ void ConcreteSyntacticalTree::print(){
 }
 
 
-void ConcreteSyntacticalTree::print_grammar(){
+void ConcreteSyntacticalTree::printGrammar(){
     for(int i = 0; i < this->_G.size(); i++){
         _G[i].print();
     }

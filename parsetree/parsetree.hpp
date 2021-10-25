@@ -10,9 +10,7 @@
 #include <fstream>
 #include <unordered_map>
 
-
 namespace parsetree{
-
 
 
 // Token class stores the type and value the tokenizer scans from the source code
@@ -54,13 +52,9 @@ class Tokenizer {
     Token getNextToken(); // Returns the next token of the source code 
 
     bool isEnd(); // Returns true if the source code is finished
-
 };
 
-
-
-
-
+// A singular Charactor in BNF grammar
 struct Character
 {   
     public:
@@ -68,13 +62,13 @@ struct Character
     Character(std::string type, std::string value);
 
     bool operator == (const Character& c);
-    bool operator == (const Token& t);
+    bool operator == (const Token& t); // Used to compare tokens fore parsing
 
     std::string type;
     std::string value;
 };
 
-// A singular rule for the grammar of an expression
+// A singular rule for the grammar of an expression made of Charactors
 class Rule {
 
     public:
@@ -91,12 +85,10 @@ class Rule {
 
     std::vector<Character>::iterator begin();
     std::vector<Character>::iterator end();
-
-
 };
 
 
-// Grammar for a single expression
+// Grammar for a single expression made of rules
 class Grammar {
     
 
@@ -114,8 +106,6 @@ class Grammar {
 
     std::vector<Rule>::iterator begin();
     std::vector<Rule>::iterator end();
-    
-
 };
 
 // Is a parse tree node that stores relevant information
@@ -125,14 +115,15 @@ class Node {
     Node (Node* parent_node_ptr, std::string type, std::vector<Node*> children);
     
     std::string type;
+    std::map<std::string, std::string> data;
     std::vector<Node*> children;
 
     std::vector<Node*>  getChildren();
     std::string getType();
 
-    bool isNull();
+    bool isNull(); //determineds if the node is null
 
-    void print(int depth);
+    void print(int depth); //recursive print
 
     Node* _parent_node_ptr;
 };
@@ -148,8 +139,6 @@ class ConcreteSyntacticalTree{
     std::vector<Grammar> _G;
     Grammar _root_grammar;
 
-    
-
     std::map<Grammar,Grammar> _a_to_a_prime;
 
     std::map<std::string, std::string> _regex_map;
@@ -158,23 +147,19 @@ class ConcreteSyntacticalTree{
     int _current_token;
     std::vector<Token> _tokens;
 
+    Node* _parse(Grammar G, Character C, int token_number); //recurisive desent parser 
 
+    void _trimTree(Node* node); //trim the tree for cst to ast translation
 
-    Node* _parse(Grammar G, Character C, int token_number);
+    Node* _makeDataNode(Token t); //constructs data nodes for trees
 
-    Node _parseHelper(Token token_1, Token token_2, Token token_help, Grammar G, Rule R);
-
-    void _trimTree(Node* node);
-
-    Node* _makeDataNode(Token t);
-
-    void _makeGrammar();
+    void _makeGrammar(); //removes left recursion in the BNF grammer
 
     void _helpPrint(Node start_node, int depth);
 
-    void _merge_primes(Node* node);
+    void _mergePrimes(Node* node); // helps trim tree
 
-    void _rid_epsilons(Node* node);
+    void _ridEpsilons(Node* node); // helps trim tree
     
 
     public:
@@ -184,35 +169,20 @@ class ConcreteSyntacticalTree{
 
     Grammar getGrammar (Character c);
 
-    void makeTree();
+    void makeTree(); //uses lexer and grammar rules to make a concrete syntactical tree of nodes
 
+    Node* getTreeHeader(); //returns the root node of the tree
 
+    void readF(std::string src); // work in progress
 
-    Node* getTreeHeader();
+    void writeF(std::string dst = "parser_cst.json"); // work in progress
 
-    void readF(std::string src);
+    void print(); //
 
-    void writeF(std::string dst = "parser_cst.json");
-
-    void print();
-
-    void print_grammar();
-    
-
+    void printGrammar();
 };
 
 
 bool operator < (const Grammar& g1, const Grammar& g2);
-
-// class AbstractSyntacticalTree {
-
-
-// };
-
-
-
 };
-
-
-
 #endif 

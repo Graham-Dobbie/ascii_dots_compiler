@@ -41,6 +41,7 @@ int main(){
 
     std::map<std::string, std::string> regex_map;
     regex_map.insert(std::pair<std::string, std::string> ("NUMBER","^\\d+"));
+    // regex_map.insert(std::pair<std::string, std::string> ("NUMBDECIMAL","^\\d+\\.\\d+"));
     regex_map.insert(std::pair<std::string, std::string> ("SPACE","^\\s+"));
     regex_map.insert(std::pair<std::string, std::string> ("IDENT","^([a-zA-Z]+((\\w+)|(\\d+))?)|(\\d+([a-zA-Z_])((\\w+)|(\\d+))?)"));
     regex_map.insert(std::pair<std::string, std::string> ("OPERATOR","^[\\+\\/\\=\\*\\^\\%\\-]"));
