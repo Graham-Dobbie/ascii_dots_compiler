@@ -114,7 +114,7 @@ class Node {
     Node();
     Node (Node* parent_node_ptr, std::string type, std::vector<Node*> children);
     
-    std::string type;
+    std::string value;
     std::map<std::string, std::string> data;
     std::vector<Node*> children;
 

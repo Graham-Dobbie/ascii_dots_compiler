@@ -32,6 +32,8 @@ class SyntaxTreeBranch{
 
     void setHeader(int child, Node* node = nullptr);
 
+    void headerBack();
+
 };
 
 
@@ -42,9 +44,13 @@ class AbstractSyntacticalTree {
     Node* root_node;
     Node* header_node;
 
-    std::map<SyntaxTreeBranch, SyntaxTreeBranch> _branch_swaps; 
+    std::map<SyntaxTreeBranch, SyntaxTreeBranch> _branch_swaps;
 
-    std::vector<SyntaxTreeBranch*> _find_branch(SyntaxTreeBranch template_branch);
+    std::vector<SyntaxTreeBranch*> _helper_find_branch(SyntaxTreeBranch template_branch, std::vector<SyntaxTreeBranch*> results);
+
+    std::vector<SyntaxTreeBranch*> find_branch(SyntaxTreeBranch template_branch, std::vector<SyntaxTreeBranch*> results);
+
+
 
     void _replace_branch(SyntaxTreeBranch branch);
 

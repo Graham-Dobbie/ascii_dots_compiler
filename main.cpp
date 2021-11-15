@@ -1,7 +1,10 @@
 #include <parsetree.hpp>
+#include <constructor.hpp>
 
 using namespace std;
 using namespace parsetree;
+using namespace constructor;
+
 
 vector<Grammar> readGrammar(std::string src = "grammar.bnf"){
     
@@ -37,8 +40,6 @@ vector<Grammar> readGrammar(std::string src = "grammar.bnf"){
 
 int main(){
 
-    Tokenizer lexer = Tokenizer();
-
     std::map<std::string, std::string> regex_map;
     regex_map.insert(std::pair<std::string, std::string> ("NUMBER","^\\d+"));
     // regex_map.insert(std::pair<std::string, std::string> ("NUMBDECIMAL","^\\d+\\.\\d+"));
@@ -55,9 +56,19 @@ int main(){
     
     vector<Grammar> G = readGrammar();
 
-    ConcreteSyntacticalTree cst = ConcreteSyntacticalTree(G, regex_map,raw_text);
+    ConcreteSyntacticalTree cst(G, regex_map, raw_text);
 
     cst.makeTree();
 
     cst.print();
+
+
+
+    SyntaxTreeBranch st1(cst.getTreeHeader());
+    SyntaxTreeBranch st2(cst.getTreeHeader());
+
+    cout << (st1 == st2) << endl;
+
+    
+
 }

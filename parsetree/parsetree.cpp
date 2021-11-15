@@ -99,12 +99,12 @@ void Tokenizer::setTokenRegex(std::map<std::string, std::string> map){
 
 Node::Node(){
     this->_parent_node_ptr = nullptr;
-    this->type = "NULL";
+    this->value = "NULL";
 }
 
-Node::Node(Node* parent_node_ptr, std::string type, std::vector<Node*> children){
+Node::Node(Node* parent_node_ptr, std::string value, std::vector<Node*> children){
     this->_parent_node_ptr = parent_node_ptr;
-    this->type = type;
+    this->value = value;
     this->children = children;
 }
 
@@ -112,7 +112,7 @@ void Node::print(int depth){
     for (int i = 0; i < depth; i++){
         std::cout << "--";
     }
-    std::cout << (std::string)this->type << ":" << std::endl;
+    std::cout << (std::string)this->value << ":" << std::endl;
     for (int i =0; i < this->children.size(); i++){
         Node* child = this->children[i];
         child->print(depth+1);
@@ -121,7 +121,7 @@ void Node::print(int depth){
 };
 
 bool Node::isNull(){
-    if(this->type == "NULL"){
+    if(this->value == "NULL"){
         return true;
     }
     else{
@@ -340,17 +340,18 @@ ConcreteSyntacticalTree::ConcreteSyntacticalTree(std::vector<Grammar> grammar, s
 Node* ConcreteSyntacticalTree::_makeDataNode(Token t){
     Node *child_node = new Node();
         child_node->_parent_node_ptr = this->_header_node;
-        child_node->type = t.type;
+        child_node->value = t.type;
 
         Node *data_node = new Node();
         data_node->_parent_node_ptr = child_node;
-        data_node->type = t.value;
+        data_node->value = t.value;
 
         child_node->children.push_back(data_node);
         return child_node;
 }
 
 Node* ConcreteSyntacticalTree::_parse(Grammar G, Character C, int t ){
+    
     int initial_token = t;
     if (C.type == "RAW"){
         if (C == this->_tokens[this->_current_token]){
@@ -370,7 +371,7 @@ Node* ConcreteSyntacticalTree::_parse(Grammar G, Character C, int t ){
 
         Node* return_node = new Node();
 
-        return_node->type = G._name;
+        return_node->value = G._name;
 
         Node* old_header = this->_header_node;
         return_node->_parent_node_ptr = old_header;
@@ -515,7 +516,7 @@ void ConcreteSyntacticalTree::_mergePrimes(Node* node){
     Grammar h_p_g;
 
     for (auto itr = this->_a_to_a_prime.begin(); itr != this->_a_to_a_prime.end(); itr++ ){
-        if(node->type == itr->first._name){
+        if(node->value == itr->first._name){
           h_g = itr->first;
           h_p_g = itr->second;
         }
@@ -527,7 +528,7 @@ void ConcreteSyntacticalTree::_mergePrimes(Node* node){
         if (c.size() > 0){
             Node* child = c[i];
 
-            if(child->type == h_p_g._name){
+            if(child->value == h_p_g._name){
                 node->children.erase(node->children.begin() + i);
 
                 for(int j = 0; j < child->children.size(); j++){
@@ -545,10 +546,10 @@ void ConcreteSyntacticalTree::_ridEpsilons(Node* node){
     
     Node* parent = node->_parent_node_ptr;
 
-    if ( node->type == "END" ){
+    if ( node->value == "END" ){
         for(int i = 0; i < parent->children.size(); i++){
 
-            if(node->type == parent->children[i]->type){
+            if(node->value == parent->children[i]->value){
                 
                 parent->children.erase(parent->children.begin() + i);
             }
@@ -558,11 +559,11 @@ void ConcreteSyntacticalTree::_ridEpsilons(Node* node){
     else if (node->children.size() > 0 ){
         Node* child = node->children[0];
 
-        if ((child->type == "END") or (node->type == "END")){
+        if ((child->value == "END") or (node->value == "END")){
 
             for(int i = 0; i < parent->children.size(); i++){
 
-                if(node->type == parent->children[i]->type){
+                if(node->value == parent->children[i]->value){
 
                     parent->children.erase(parent->children.begin() + i);
                 }
