@@ -1,74 +1,44 @@
 #include <parsetree.hpp>
-#include <constructor.hpp>
 
 using namespace std;
 using namespace parsetree;
-using namespace constructor;
 
+vector<string> readFile(std::string src) {
 
-vector<Grammar> readGrammar(std::string src = "grammar.bnf"){
-    
     string line;
-    ifstream myfile (src);
-    vector<Grammar> G;
-    if (myfile.is_open())
-    {
-        while ( getline (myfile,line) )
-        {
-            Grammar g = Grammar(line);
-            G.push_back(g);
+    ifstream myfile(src);
+    vector<string> text;
+    if (myfile.is_open()) {
+        while (getline(myfile, line)) {
+            text.push_back(line);
         }
         myfile.close();
-        return G;
-  }
-  else{
-      cout << "Can't open file" << endl;
-      cout << "Would you like to create: " << src << " Y/n:";
-      string responce;
-      cin >> responce;
-      if (responce == "Y"){
-            ofstream myfile (src);
-            return readGrammar();
-      }
-      else{
-          vector<Grammar> v;
-          return v ;
-      }
-  }
+        return text;
+    } else {
+        cout << "Can't open file" << endl;
+        cout << "Would you like to create: " << src << " Y/n: ";
+        string responce;
+        cin >> responce;
+        if (responce == "n") {
+            vector<string> text;
+            return text;
+            
+        } else {
+            ofstream myfile(src);
+            return readFile(src);
+        }
+    }
 }
 
+int main() {
 
-int main(){
+    vector<string> raw_text = readFile("code.dots");
+    vector<string> grammer_text = readFile("grammar.bnf");
 
-    std::map<std::string, std::string> regex_map;
-    regex_map.insert(std::pair<std::string, std::string> ("NUMBER","^\\d+"));
-    // regex_map.insert(std::pair<std::string, std::string> ("NUMBDECIMAL","^\\d+\\.\\d+"));
-    regex_map.insert(std::pair<std::string, std::string> ("SPACE","^\\s+"));
-    regex_map.insert(std::pair<std::string, std::string> ("IDENT","^([a-zA-Z]+((\\w+)|(\\d+))?)|(\\d+([a-zA-Z_])((\\w+)|(\\d+))?)"));
-    regex_map.insert(std::pair<std::string, std::string> ("OPERATOR","^[\\+\\/\\=\\*\\^\\%\\-]"));
-    regex_map.insert(std::pair<std::string, std::string> ("PRESEDENCE_SIGNIFIER","^[\\(\\)\\[\\]]"));
-    regex_map.insert(std::pair<std::string, std::string> ("START","^<start>"));
-    
+    vector<Grammar> G;
+    for (int i = 0; i < grammer_text.size(); i++) {
+        G.push_back(Grammar(grammer_text[i]));
+    }
 
-    string raw_text;
-    cin >> raw_text;
-    cout << endl;
-    
-    vector<Grammar> G = readGrammar();
-
-    ConcreteSyntacticalTree cst(G, regex_map, raw_text);
-
-    cst.makeTree();
-
-    cst.print();
-
-
-
-    SyntaxTreeBranch st1(cst.getTreeHeader());
-    SyntaxTreeBranch st2(cst.getTreeHeader());
-
-    cout << (st1 == st2) << endl;
-
-    
-
+    Tokenizer2d lexer2d(raw_text);
 }
