@@ -2,39 +2,6 @@
 
 namespace parsetree {
 
-Cord::Cord() {
-    this->x = 0;
-    this->y = 0;
-};
-
-Cord::Cord(int x, int y) {
-    this->x = 0;
-    this->y = 0;
-};
-
-bool Cord::operator==(const Cord &v) {
-    if ((this->x == v.x) and (this->y == v.y)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-Cord Cord::operator+(const Cord &v) { return Cord(this->x + v.x, this->y + v.y); }
-
-Cord Cord::operator-(const Cord &v) { return Cord(this->x - v.x, this->y - v.y); }
-
-Cord Cord::operator*(const int s) { return Cord(this->x * s, this->y * s); }
-
-std::vector<Cord> Cord::getNeighbors() {
-    std::vector<Cord> cords;
-    cords.push_back(Cord(this->x + 1, this->y));
-    cords.push_back(Cord(this->x - 1, this->y));
-    cords.push_back(Cord(this->x, this->y + 1));
-    cords.push_back(Cord(this->x, this->y - 1));
-    return cords;
-}
-
 Token::Token() {
     this->type = "END";
     this->text_data = "";
@@ -44,14 +11,6 @@ Token::Token(std::string type, std::string text_data) {
     this->type = type;
     this->text_data = text_data;
 }
-
-Token::Token(std::string type, std::vector<Cord> inputs, std::vector<Cord> outputs, std::string text_data) {
-
-    this->type = type;
-    this->inputs = inputs;
-    this->outputs = outputs;
-    this->text_data = text_data;
-};
 
 bool Token::isEnd() {
     if (this->type == "END") {
@@ -65,70 +24,6 @@ void Token::print() {
 
     std::cout << this->type << ":" << this->text_data << "\n";
     std::cout << std::endl;
-}
-
-Tokenizer2d::Tokenizer2d() {}
-
-Tokenizer2d::Tokenizer2d(std::vector<std::string> raw_text) {
-
-    for (int i = 0; i < raw_text.size(); i++) {
-        std::vector<char> app_vec;
-        for (int j = 0; j < raw_text[i].size(); j++) {
-            app_vec.push_back(raw_text[i][j]);
-        }
-        this->text.push_back(app_vec);
-    }
-}
-
-Cord *Tokenizer2d::_findChar() {
-    for (int i = 0; i < this->text.size(); i++) {
-        for (int j = 0; j < this->text[i].size(); j++) {
-            if (not(text[i][j] == (char)" ") or (text[i][j] == (char)"")) {
-                return new Cord(i, j);
-            }
-        }
-    }
-    return NULL;
-}
-
-std::pair<std::vector<char>, std::vector<Cord *>> Tokenizer2d::_followPath(Cord *cord) {
-    std::vector<char> segment_text;
-    char c = this->text[cord->x][cord->y];
-    segment_text.push_back(c);
-
-    bool in_array(char c, std::vector<char> vec){
-        return std::find(vec.begin(), vec.end(), item) != vec.end()
-    }
-
-    std::vector<char>  strait_pipes = {"-","|"};
-    std::vector<char>  direction_pipes = {"*",">","<","v","^","(",")"};
-
-
-
-    std::vector<Cord> untested_neighbors = cord->getNeighbors();
-    std::vector<Cord> neighbors;
-    for (int i = 0; i < untested_neighbors.size(); i++) {
-        Cord neighbor = cord[i];
-        if ((neighbor.x >= 0) or (neighbor.x < this->text.size())) {
-            if ((neighbor.y >= 0) or (neighbor.y < this->text[neighbor.x].size())) {
-                neighbors.push_back(neighbor);
-            }
-        }
-    }
-
-
-}
-
-std::vector<Token> Tokenizer2d::getTokens() {
-    std::vector<Token> token_list;
-
-    Cord *c = this->_findChar();
-    if (c != nullptr) {
-        std::pair<std::vector<char>, std::vector<Cord>> segments = this->_followPath(c);
-
-    } else {
-        return token_list;
-    }
 }
 
 Tokenizer::Tokenizer(std::map<std::string, std::regex> regex_map, std::string m) {

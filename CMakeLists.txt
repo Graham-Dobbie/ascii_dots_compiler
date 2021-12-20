@@ -14,4 +14,4 @@ target_include_directories(${PROJECT_NAME} PUBLIC parsetree)
 
 target_link_directories(${PROJECT_NAME} PUBLIC parsetree)
 
-target_link_libraries(${PROJECT_NAME} parsetree) 
+target_link_libraries(${PROJECT_NAME} parsetree segmenter) 

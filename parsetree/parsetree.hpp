@@ -12,64 +12,21 @@
 
 namespace parsetree {
 
-// Cord class is a 2d vector that points to a place on the parse field
-class Cord {
-  public:
-    Cord();
-    Cord(int x, int y);
-
-    int x;
-    int y;
-
-    bool operator==(const Cord &v);
-    Cord operator+(const Cord &v);
-    Cord operator-(const Cord &v);
-    Cord operator*(const int s);
-
-    std::vector<Cord> getNeighbors();
-};
-
 // Token class stores the type and value the tokenizer scans from the source code
 class Token {
 
   public:
     Token();
 
-    Token(std::string type, std::vector<Cord> inputs, std::vector<Cord> outputs, std::string text_data);
     Token(std::string type, std::string text_data);
 
     void print();
 
     std::string type;
 
-    std::vector<Cord> inputs;
-    std::vector<Cord> outputs;
     std::string text_data;
 
     bool isEnd();
-};
-
-// The Tokenizer class scans source code and separates it into tokens
-class Tokenizer2d {
-
-  private:
-    Cord _cursor = Cord();
-    std::vector<std::vector<char>> text;
-
-    std::pair<std::vector<char>, std::vector<Cord*>> _followPath(Cord* c);
-    Cord* _findChar();
-
-  public:
-    std::vector<Token> tokens;
-
-    Tokenizer2d();
-
-    Tokenizer2d(std::vector<std::string> raw_text);
-    void setString(std::string m); // Gives sources code to tokenizer
-
-    std::vector<Token> getTokens(); // Returns the all tokens of the source code
-
-    bool isEnd(); // Returns true if the source code is finished
 };
 
 // The Tokenizer class scans source code and separates it into tokens

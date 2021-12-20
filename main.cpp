@@ -1,7 +1,9 @@
 #include <parsetree.hpp>
+#include <segmenter.hpp>
 
 using namespace std;
 using namespace parsetree;
+using namespace segmenter;
 
 vector<string> readFile(std::string src) {
 
@@ -40,5 +42,9 @@ int main() {
         G.push_back(Grammar(grammer_text[i]));
     }
 
-    Tokenizer2d lexer2d(raw_text);
+    Segmenter segmenter(raw_text);
+
+    Cord* c = segmenter._findChar();
+    c->print();
+
 }
