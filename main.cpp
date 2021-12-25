@@ -44,7 +44,6 @@ int main() {
 
     Segmenter segmenter(raw_text);
 
-    Cord* c = segmenter._findChar();
-    c->print();
+    segmenter.getSegments();
 
 }

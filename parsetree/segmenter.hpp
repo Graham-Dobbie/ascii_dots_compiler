@@ -30,14 +30,14 @@ class Segment {
   public:
     Segment();
 
-    Segment(std::string type, std::vector<Cord> inputs, std::vector<Cord> outputs, std::vector<char> text_data);
+    Segment(std::string type, std::vector<Cord> cords, std::vector<Cord> outlets, std::vector<char> text_data);
     Segment(std::string type, std::vector<char> text_data);
 
     void print();
 
     std::string type;
-    std::vector<Cord> inputs;
-    std::vector<Cord> outputs;
+    std::vector<Cord> cords;
+    std::vector<Cord> outlets;
     std::vector<char> text_data;
 
     bool isEnd();
@@ -51,6 +51,10 @@ class Segmenter {
     std::vector<std::vector<char>> text;
 
     Segment _followPath(Cord *c);
+    Segment _followDirection(Cord *start, bool direction);
+
+    std::vector<Cord> _validNieghbors(Cord c);
+
 
   public:
 
