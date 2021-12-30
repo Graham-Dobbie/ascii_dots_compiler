@@ -24,6 +24,24 @@ class Cord {
     void print();
 };
 
+class Symbol {
+
+  private:
+    std::map<std::string, std::pair<std::regex, Cord>> _directions;
+
+  public:
+    Symbol();
+
+    Symbol(char name, std::regex left, std::regex right, std::regex up, std::regex down);
+    Symbol(char name, std::map<std::string, std::pair<std::regex, Cord>> directions);
+
+    Cord point(char left, char right, char up, char down);
+
+    bool operator==(const char &c);
+
+    char name;
+};
+
 // Token class stores the type and value the tokenizer scans from the source code
 class Segment {
 
@@ -49,17 +67,17 @@ class Segmenter {
   private:
     Cord _cursor = Cord();
     std::vector<std::vector<char>> text;
+    std::vector<Symbol> _symbols;
+    Symbol _any_char;
 
     Segment _followPath(Cord *c);
     Segment _followDirection(Cord *start, bool direction);
 
     std::vector<Cord> _validNieghbors(Cord c);
 
-
   public:
-
     Cord _step(Cord last, Cord current);
-    Cord* _findChar();
+    Cord *_findChar();
     std::vector<Segment> segments;
 
     Segmenter();
@@ -72,6 +90,6 @@ class Segmenter {
     bool isEnd(); // Returns true if the source code is finished
 };
 
-}
+} // namespace segmenter
 
 #endif

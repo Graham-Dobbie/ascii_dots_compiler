@@ -37,6 +37,69 @@ std::vector<Cord> Cord::getNeighbors() {
 
 void Cord::print() { std::cout << this->x << "," << this->y << std::endl; }
 
+Symbol::Symbol() {
+    std::map<std::string, std::pair<std::regex, Cord>> _directions;
+    char name;
+}
+
+Symbol::Symbol(char name, std::regex left, std::regex right, std::regex up, std::regex down) {
+    this->name = name;
+
+    std::pair<std::regex, Cord> l(left, Cord(0, -1));
+    std::pair<std::regex, Cord> r(right, Cord(0, 1));
+    std::pair<std::regex, Cord> u(up, Cord(-1, 0));
+    std::pair<std::regex, Cord> d(down, Cord(1, 0));
+
+    this->_directions.insert(std::pair<std::string, std::pair<std::regex, Cord>>("left", l));
+    this->_directions.insert(std::pair<std::string, std::pair<std::regex, Cord>>("right", r));
+    this->_directions.insert(std::pair<std::string, std::pair<std::regex, Cord>>("up", u));
+    this->_directions.insert(std::pair<std::string, std::pair<std::regex, Cord>>("down", d));
+}
+
+Symbol::Symbol(char name, std::map<std::string, std::pair<std::regex, Cord>> directions) {
+    this->name = name;
+    this->_directions = directions;
+}
+
+bool Symbol::operator==(const char &c) {
+    if (c == this->name) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+Cord Symbol::point(char left, char right, char up, char down) {
+
+    std::string left_s(1, left);
+    std::string right_s(1, right);
+    std::string up_s(1, up);
+    std::string down_s(1, down);
+
+    std::smatch matches;
+    std::regex_search(left_s, matches, this->_directions["left"].first);
+    if (!matches.empty()) {
+        return this->_directions["left"].second;
+    }
+
+    std::regex_search(right_s, matches, this->_directions["right"].first);
+    if (!matches.empty()) {
+        return this->_directions["right"].second;
+    }
+
+    std::regex_search(up_s, matches, this->_directions["up"].first);
+    if (!matches.empty()) {
+        return this->_directions["up"].second;
+    }
+
+    std::regex_search(down_s, matches, this->_directions["down"].first);
+    if (!matches.empty()) {
+        return this->_directions["down"].second;
+    }
+
+    return Cord(0, 0);
+}
+
 Segment::Segment(std::string type, std::vector<Cord> inputs, std::vector<Cord> outputs, std::vector<char> text_data) {
 
     this->type = type;
@@ -90,9 +153,34 @@ Segmenter::Segmenter(std::vector<std::string> raw_text) {
         }
         std::cout << std::endl;
     }
+
+    std::regex hoz_tmp("^[\\-]+");
+    std::regex vert_tmp("^[\\|]+");
+    this->_symbols.push_back(Symbol('.', hoz_tmp, hoz_tmp, vert_tmp, vert_tmp));
+
+    std::regex hoz("^[^\\s\\|\\<\\>\\^V\\[\\]\\{\\}\\*\\~\\(\\)]+");
+    std::regex nothing("^(?=x)(?!x)");
+    this->_symbols.push_back(Symbol('-', hoz, hoz, nothing, nothing));
+
+    std::regex vert("^[^\\s\\-\\<\\>\\^V\\[\\]\\{\\}\\*\\~\\(\\)]+");
+    this->_symbols.push_back(Symbol('|', nothing, nothing, vert, vert));
+
+    this->_symbols.push_back(Symbol('/', hoz, hoz, vert, vert));
+    this->_symbols.push_back(Symbol('\\', hoz, hoz, vert, vert));
+
+    this->_symbols.push_back(Symbol('>', nothing, nothing, nothing, nothing));
+    this->_symbols.push_back(Symbol('<', nothing, nothing, nothing, nothing));
+    this->_symbols.push_back(Symbol('V', nothing, nothing, nothing, nothing));
+    this->_symbols.push_back(Symbol('^', nothing, nothing, nothing, nothing));
+    this->_symbols.push_back(Symbol('(', nothing, nothing, nothing, nothing));
+    this->_symbols.push_back(Symbol(')', nothing, nothing, nothing, nothing));
+    this->_symbols.push_back(Symbol('*', nothing, nothing, nothing, nothing));
+    this->_symbols.push_back(Symbol('~', nothing, nothing, nothing, nothing));
+
+    this->_any_char = Symbol('?', hoz, hoz, vert, vert);
 }
 
-Cord *Segmenter::_findChar() { //search text for a non space (' ') char
+Cord *Segmenter::_findChar() { // search text for a non space (' ') char
     Cord *c = new Cord;
     for (int i = 0; i < this->text.size(); i++) {
         for (int j = 0; j < this->text[i].size(); j++) {
@@ -120,6 +208,7 @@ std::vector<Cord> Segmenter::_validNieghbors(Cord c) {
     }
     return neighbors;
 }
+// Cord Segmenter::_step(Cord last, Cord current) {}
 
 // Cord Segmenter::_step(Cord last, Cord current) {
 
@@ -172,128 +261,196 @@ std::vector<Cord> Segmenter::_validNieghbors(Cord c) {
 // }
 
 Segment Segmenter::_followDirection(Cord *start, bool direction) {
-    Segment seg = Segment();
-    seg.type = "UNORDERED";
 
-    Cord *current_cord = start;
-    Cord *previous_cord = new Cord(-1, -1);
-    bool broken = false;
+    Segment seg;
 
-    while (!broken) {
-        char c = text[current_cord->x][current_cord->y];
-        if (c == '.') { // if the current char is a start
+    seg.type = "PARTIAL";
 
-            seg.cords.push_back(*current_cord);
-            seg.outlets.push_back(*current_cord);
-            std::vector<Cord> neighbors = this->_validNieghbors(*current_cord);
+    Cord prv_cord = Cord(-1, -1);
+    Cord src_cord = *start;
 
-            for (int i = neighbors.size(); i >= 1; i--) {
+    while (true) {
+        char c = this->text[src_cord.x][src_cord.y];
+        char c_l = this->text[src_cord.x][src_cord.y - 1];
 
-                Cord n_cord = neighbors[i - 1];
-                char n_c = text[n_cord.x][n_cord.y];
+        if ((c_l == '[') or (c_l == '{')) { // Check to see if it moved into an operation
+            return seg;
 
-                if (n_c == '-') {
-                    if (n_cord.x != current_cord->x) {
-                        neighbors.pop_back();
+        } else {
+            std::vector<Cord> n = this->_validNieghbors(src_cord);
+            if (c == '.') { // need to check for multiple path ways
+
+                std::vector<Cord> valid_n;
+
+                for (int i = 0; i < n.size(); i++) {
+                    Cord n_cord = n[i];
+                    char n_c = this->text[n_cord.x][n_cord.y];
+                    if ((n_c == '|') and ((n_cord.x == src_cord.x - 1) or (n_cord.x == src_cord.x + 1))) {
+                        valid_n.push_back(n_cord);
+                    } else if ((n_c == '-') and ((n_cord.y == src_cord.y - 1) or (n_cord.y == src_cord.y + 1))) {
+                        valid_n.push_back(n_cord);
                     }
-                } else if (n_c == '|') {
-                    if (n_cord.y != current_cord->y) {
-                        neighbors.pop_back();
-                    }
+                }
+
+                if (valid_n.size() > 1) {
+                    throw std::runtime_error("Multiple pipes to one dot");
+                } else if ((valid_n.size() < 2) and (direction)) {
+                    seg.cords.push_back(src_cord);
+                    seg.outlets.push_back(src_cord);
+                    seg.text_data.push_back(c);
+                    prv_cord = src_cord;
+                    src_cord = valid_n[0];
                 } else {
-                    neighbors.pop_back();
+                    return seg;
                 }
-            }
-
-            if ((neighbors.size() == 1)) {
-                Cord n_cord = neighbors[0];
-                char n_c = text[n_cord.x][n_cord.y];
-                if (not(neighbors[-1] == *previous_cord)) {
-                    if (n_c == '-') {
-                        if ((n_cord.y == current_cord->y + 1) and direction) {
-                            previous_cord = current_cord;
-                            current_cord = &neighbors[0];
-                        } else {
-                            broken = true;
-                        }
-                    } else if (n_c == '|') {
-                        if ((n_cord.x == current_cord->x + 1) and direction) {
-                            previous_cord = current_cord;
-                            current_cord = &neighbors[0];
-                        } else {
-                            broken = true;
-                        }
-
-                    } else {
-                        broken = true;
-                    }
-
-                } else if (neighbors.size() == 0) {
-                    broken = true;
-                } else {
-                    throw std::runtime_error("Dot starter has two exits");
-                }
-
-            } else if (c == '-') {
-                seg.cords.push_back(*current_cord);
-                std::vector<Cord> neighbors = this->_validNieghbors(*current_cord);
-
-                for (int i = neighbors.size(); i >= 1; i--) {
-
-                    Cord n_cord = neighbors[i - 1];
-                    char n_c = text[n_cord.x][n_cord.y];
-
-                    if ((n_cord.x != current_cord->x) or (n_cord == *previous_cord)) {
-                        neighbors.pop_back();
-                    }
-                }
-                if(neighbors.size() == 1){
-                    
-                }
-                else if(neighbors.size() == 0){
-                    seg.outlets.push_back(*current_cord);
-                }
-                else{
-                    throw std::runtime_error("bro how?");
-                }
-
 
             } else {
-                std::cout << "not implemented yet" << std::endl;
-                broken = true;
+                seg.cords.push_back(src_cord);
+                seg.text_data.push_back(c);
+
+                char c_l = ' ';
+                char c_r = ' ';
+                char c_u = ' ';
+                char c_d = ' ';
+
+                for (int i = 0; i < n.size(); i++) {
+
+                    Cord n_cord = n[i];
+                    char n_c = this->text[n_cord.x][n_cord.y];
+                    Cord dir = src_cord - n_cord;
+
+                    bool valid = true;
+
+                    if (n_cord == prv_cord) {
+                        valid = false;
+                    }
+
+                    else if (c == '/') {
+                        if ((src_cord - prv_cord == Cord(0, 1)) and !(dir == Cord(-1, 0))) {
+                            valid = false;
+                        } else if ((src_cord - prv_cord == Cord(0, -1)) and !(dir == Cord(1, 0))) {
+                            valid = false;
+                        }
+                    } else if (c == '\\') {
+                        if ((src_cord - prv_cord == Cord(0, 1)) and !(dir == Cord(1, 0))) {
+                            valid = false;
+                        } else if ((src_cord - prv_cord == Cord(0, -1)) and !(dir == Cord(-1, 0))) {
+                            valid = false;
+                        }
+                    } else {
+                        if ((src_cord - prv_cord == Cord(0, 1)) and !(dir == Cord(0, -1))) {
+                            valid = false;
+                        } else if ((src_cord - prv_cord == Cord(0, -1)) and !(dir == Cord(0, 1))) {
+                            valid = false;
+                        } else if ((src_cord - prv_cord == Cord(1, 0)) and !(dir == Cord(-1, 0))) {
+                            valid = false;
+                        } else if ((src_cord - prv_cord == Cord(-1, 0)) and !(dir == Cord(1, 0))) {
+                            valid = false;
+                        }
+                    }
+
+                    if (valid) {
+                        if (dir == Cord(0, 1)) {
+                            c_l = c;
+                        } else if (dir == Cord(0, -1)) {
+                            c_r = c;
+                        } else if (dir == Cord(-1, 0)) {
+                            c_u = c;
+                        } else if (dir == Cord(1, 0)) {
+                            c_d = c;
+                        }
+                    }
+                }
+
+                Symbol s;
+                for (int i = 0; i < this->_symbols.size(); i++) {
+                    if (this->_symbols[i] == c) {
+                        s = this->_symbols[i];
+                    }
+                }
+
+                Cord point = s.point(c_l, c_r, c_u, c_d);
+                if (point == Cord(0,0)){
+                    seg.outlets.push_back(src_cord);
+                    return seg;
+                }else{
+                    prv_cord = src_cord;
+                    src_cord = src_cord + point;
+                }
             }
         }
-        return seg;
     }
 }
 
 Segment Segmenter::_followPath(Cord *cord) { // follows a path from a start point to its ends
 
-    // segment search starts from the same place but haas different directions
-    Segment left = this->_followDirection(cord, false);
-    Segment right = this->_followDirection(cord, true);
+    Segment seg;
 
-    // combine the left and right segments 
-    Segment combined;
-    combined.type = "UNORDERED";
+    // Checking to see if the path is a operation
+    bool in_op = false;
+    Cord op_cord;
 
-    for (int i = 0; i < left.cords.size(); i++) {
-        combined.cords.push_back(left.cords[i]);
-    }
-    for (int i = 0; i < right.cords.size(); i++) {
-        combined.cords.push_back(right.cords[i]);
-    }
-    for (int i = 0; i < left.outlets.size(); i++) {
-        combined.outlets.push_back(left.outlets[i]);
-    }
-    for (int i = 0; i < right.outlets.size(); i++) {
-        combined.outlets.push_back(right.outlets[i]);
+    char c = this->text[cord->x][cord->y];
+    char c_l = this->text[cord->x][cord->y - 1];
+
+    if ((c == '[') or (c == ']') or (c == '{') or (c == '}')) {
+        in_op = true;
+        if ((c == '[') or (c == '{'))
+            op_cord = *cord;
+        else {
+            op_cord = *cord + Cord(0, -2);
+        }
+    } else if ((c_l == '[') or (c_l == '{')) {
+        in_op = true;
+        op_cord = *cord + Cord(0, -1);
     }
 
-    //TODO: order the segment into a left to right line
-    // Code:
+    if (in_op) { // If the path is in an operation create an easy segment
+        seg.type = "OPERATION";
+        for (int i = 0; i < 3; i++) {
+            Cord c = *cord + Cord(0, i);
+            seg.cords.push_back(c);
+            seg.text_data.push_back(this->text[c.x][c.y]);
+        }
 
-    return combined;
+        seg.outlets.push_back(*cord + Cord(0, -1));
+        seg.outlets.push_back(*cord + Cord(0, 3));
+        seg.outlets.push_back(*cord + Cord(1, 1));
+        seg.outlets.push_back(*cord + Cord(-1, 1));
+
+        return seg;
+    }
+
+    else {
+
+        // segment search starts from the same place but haas different directions
+        Segment left = this->_followDirection(cord, false);
+        Segment right = this->_followDirection(cord, true);
+
+        // combine the left and right segments
+
+        seg.type = "UNORDERED";
+
+        for (int i = 0; i < left.cords.size(); i++) {
+            seg.cords.push_back(left.cords[i]);
+            seg.text_data.push_back(left.text_data[i]);
+        }
+        for (int i = 0; i < right.cords.size(); i++) {
+            seg.cords.push_back(right.cords[i]);
+            seg.text_data.push_back(right.text_data[i]);
+        }
+        for (int i = 0; i < left.outlets.size(); i++) {
+            seg.outlets.push_back(left.outlets[i]);
+        }
+        for (int i = 0; i < right.outlets.size(); i++) {
+            seg.outlets.push_back(right.outlets[i]);
+        }
+
+        // TODO: order the segment into a left to right line
+        //  Code: 
+
+        return seg;
+    }
 }
 
 std::vector<Segment> Segmenter::getSegments() { // get the ordered segments of the text
