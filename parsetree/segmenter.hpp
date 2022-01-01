@@ -48,14 +48,14 @@ class Segment {
   public:
     Segment();
 
-    Segment(std::string type, std::vector<Cord> cords, std::vector<Cord> outlets, std::vector<char> text_data);
+    Segment(std::string type, std::vector<Cord> cords, std::vector<std::pair<Cord, Cord>> outlets, std::vector<char> text_data);
     Segment(std::string type, std::vector<char> text_data);
 
     void print();
 
     std::string type;
     std::vector<Cord> cords;
-    std::vector<Cord> outlets;
+    std::vector<std::pair<Cord, Cord>> outlets;
     std::vector<char> text_data;
 
     bool isEnd();
@@ -66,18 +66,30 @@ class Segmenter {
 
   private:
     Cord _cursor = Cord();
+
     std::vector<std::vector<char>> text;
+
     std::vector<Symbol> _symbols;
     Symbol _any_char;
 
-    Segment _followPath(Cord *c);
-    Segment _followDirection(Cord *start, bool direction);
+    std::vector<Segment> _segs;
+
+    char _lib_warp;
+    std::vector<std::string> _libs_used;
+    std::vector<char> _warps;
+
+    
+    void _fuction_data_scan();
+    void _deleteComments();
+
+    void _followPath();
+    Segment _followDirection(bool direction);
 
     std::vector<Cord> _validNieghbors(Cord c);
 
   public:
     Cord _step(Cord last, Cord current);
-    Cord *_findChar();
+    Cord *_findDot();
     std::vector<Segment> segments;
 
     Segmenter();
@@ -86,6 +98,9 @@ class Segmenter {
     void setString(std::string m); // Gives sources code to tokenizer
 
     std::vector<Segment> getSegments(); // Returns the all segments of the source code
+
+    void printText();
+    void cropText();
 
     bool isEnd(); // Returns true if the source code is finished
 };

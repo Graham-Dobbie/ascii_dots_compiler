@@ -100,7 +100,7 @@ Cord Symbol::point(char left, char right, char up, char down) {
     return Cord(0, 0);
 }
 
-Segment::Segment(std::string type, std::vector<Cord> inputs, std::vector<Cord> outputs, std::vector<char> text_data) {
+Segment::Segment(std::string type, std::vector<Cord> inputs, std::vector<std::pair<Cord, Cord>> outputs, std::vector<char> text_data) {
 
     this->type = type;
     this->cords = inputs;
@@ -139,7 +139,7 @@ Segmenter::Segmenter() {}
 
 Segmenter::Segmenter(std::vector<std::string> raw_text) {
 
-    for (int i = 0; i < raw_text.size(); i++) {
+    for (int i = 0; i < raw_text.size(); i++) { // convert raw text
         std::vector<char> app_vec;
         for (int j = 0; j < raw_text[i].size(); j++) {
             app_vec.push_back(raw_text[i][j]);
@@ -147,22 +147,51 @@ Segmenter::Segmenter(std::vector<std::string> raw_text) {
         this->text.push_back(app_vec);
     }
 
-    for (int i = 0; i < text.size(); i++) {
+    for (int i = 0; i < text.size(); i++) { // print raw text
         for (int j = 0; j < text[i].size(); j++) {
             std::cout << text[i][j];
         }
         std::cout << std::endl;
     }
+    std::cout << std::endl;
 
+    this->_fuction_data_scan(); // scan for libaries, warps and libary warps
+    std::cout << "Warps:" << std::endl;
+    for (int i = 0; i < this->_warps.size(); i++) {
+        std::cout << this->_warps[i] << '\n';
+    }
+    std::cout << std::endl;
+
+    std::cout << "Libs:" << std::endl;
+    for (int i = 0; i < this->_libs_used.size(); i++) {
+        std::cout << this->_libs_used[i] << '\n';
+    }
+    std::cout << std::endl;
+    std::cout << "Lib Warp:" << std::endl;
+    std::cout << this->_lib_warp;
+    std::cout << std::endl;
+
+    // Make symbols
     std::regex hoz_tmp("^[\\-]+");
     std::regex vert_tmp("^[\\|]+");
     this->_symbols.push_back(Symbol('.', hoz_tmp, hoz_tmp, vert_tmp, vert_tmp));
 
-    std::regex hoz("^[^\\s\\|\\<\\>\\^V\\[\\]\\{\\}\\*\\~\\(\\)]+");
+    std::string hoz_str = "^[^\\s\\|\\<\\>\\^V\\[\\]\\{\\}\\*\\~\\(\\)";
+    std::string vert_str = "^[^\\s\\-\\<\\>\\^V\\[\\]\\{\\}\\*\\~\\(\\)";
+
+    for (int i = 0; i < this->_warps.size(); i++) { // Adds warps to the no fly symbol list
+        hoz_str = hoz_str + this->_warps[i];
+        vert_str = vert_str + this->_warps[i];
+    }
+    hoz_str = hoz_str + "]+";
+    vert_str = vert_str + "]+";
+
+    // start making symbols
+    std::regex hoz(hoz_str);
     std::regex nothing("^(?=x)(?!x)");
     this->_symbols.push_back(Symbol('-', hoz, hoz, nothing, nothing));
 
-    std::regex vert("^[^\\s\\-\\<\\>\\^V\\[\\]\\{\\}\\*\\~\\(\\)]+");
+    std::regex vert(vert_str);
     this->_symbols.push_back(Symbol('|', nothing, nothing, vert, vert));
 
     this->_symbols.push_back(Symbol('/', hoz, hoz, vert, vert));
@@ -177,22 +206,150 @@ Segmenter::Segmenter(std::vector<std::string> raw_text) {
     this->_symbols.push_back(Symbol('*', nothing, nothing, nothing, nothing));
     this->_symbols.push_back(Symbol('~', nothing, nothing, nothing, nothing));
 
-    this->_any_char = Symbol('?', hoz, hoz, vert, vert);
+    for (int i = 0; i < this->_warps.size(); i++) { // Adding warps as symbols
+        this->_symbols.push_back(Symbol(this->_warps[i], nothing, nothing, nothing, nothing));
+    }
+
+    this->_any_char = Symbol('?', hoz, hoz, vert, vert); // if a char in not in the list it has this symbol
 }
 
-Cord *Segmenter::_findChar() { // search text for a non space (' ') char
+void Segmenter::_fuction_data_scan() {
     Cord *c = new Cord;
     for (int i = 0; i < this->text.size(); i++) {
-        for (int j = 0; j < this->text[i].size(); j++) {
-            if (not(text[i][j] == ' ')) {
+        if (text[i].size() != 0) {
+            if (text[i][0] == '%') {
 
-                c->x = i;
-                c->y = j;
-                return c;
+                char invalid_chars[] = {' ', '-', '|', '/', '\\', '.', '>', '<', '^', 'V', '(', ')', '*', '~', '+', '{', '}', '[',  ']', '_',
+                                        'a', '!', '#', '$', '1',  '2', '3', '4', '5', '6', '7', '8', '9', '0', '@', '%', '"', '\'', '?', '$'};
+
+                if (text[i][1] == '^') {
+
+                    if (std::find(invalid_chars, invalid_chars, text[i][2]) != invalid_chars) {
+                        throw std::runtime_error("Libary warp cannot be an invalid charater");
+                    } else if (std::find(this->_warps.begin(), this->_warps.end(), text[i][2]) != this->_warps.end()) {
+                        throw std::runtime_error("Libary warp cannot be a used warp");
+                    } else if ((std::find(invalid_chars, invalid_chars, text[i][2]) == invalid_chars) and (std::find(this->_warps.begin(), this->_warps.end(), text[i][2]) == this->_warps.end())) {
+                        this->_lib_warp = text[i][2];
+                        this->_warps.push_back(text[i][2]);
+                        this->text[i][0] = ' ';
+                        this->text[i][1] = ' ';
+                        this->text[i][2] = ' ';
+                    } else {
+                        throw std::runtime_error("Idk why you are here");
+                    }
+                } else if (text[i][1] == '!') {
+
+                    std::string lib_str = "";
+
+                    int j = 2;
+                    char c = text[i][j];
+                    this->text[i][0] = ' ';
+                    this->text[i][1] = ' ';
+
+                    while (c != ' ') {
+                        lib_str = lib_str + c;
+                        this->text[i][j] = ' ';
+                        j++;
+                        c = text[i][j];
+                    }
+
+                    this->_libs_used.push_back(lib_str);
+
+                    j++;
+
+                    if (std::find(invalid_chars, invalid_chars, text[i][j]) != invalid_chars) {
+                        throw std::runtime_error("Libary warp cannot be an invalid charater");
+                    } else if (std::find(this->_warps.begin(), this->_warps.end(), text[i][j]) != this->_warps.end()) {
+                        throw std::runtime_error("Libary warp cannot be a used warp");
+                    } else if ((std::find(invalid_chars, invalid_chars, text[i][j]) == invalid_chars) and (std::find(this->_warps.begin(), this->_warps.end(), text[i][j]) == this->_warps.end())) {
+                        this->_warps.push_back(text[i][j]);
+                        this->text[i][j] = ' ';
+                    } else {
+                        throw std::runtime_error("Idk why you are here");
+                    }
+
+                } else if (text[i][1] == '$') {
+                    this->text[i][0] = ' ';
+                    this->text[i][1] = ' ';
+
+                    int j = 2;
+                    char c = text[i][j];
+                    bool out = false;
+
+                    while (!out) {
+                        if (std::find(invalid_chars, invalid_chars, c) != invalid_chars) {
+                            throw std::runtime_error("Warp cannot be an invalid charater");
+                        } else if (std::find(this->_warps.begin(), this->_warps.end(), c) != this->_warps.end()) {
+                            throw std::runtime_error("Warp cannot be a used warp");
+                        } else if ((std::find(invalid_chars, invalid_chars, c) == invalid_chars) and (std::find(this->_warps.begin(), this->_warps.end(), c) == this->_warps.end())) {
+                            this->_warps.push_back(c);
+                        } else {
+                            throw std::runtime_error("Idk why you are here");
+                        }
+                        this->text[i][j] = ' ';
+                        j++;
+                        c = text[i][j];
+                        if ((j >= this->text[i].size()) or (c == ' ')) {
+                            out = true;
+                        }
+                    }
+                }
             }
         }
     }
-    return c;
+}
+
+void Segmenter::_deleteComments() {
+    bool more_comments = true;
+    while (more_comments) {
+
+        Cord start = Cord(-1, -1);
+
+        for (int i = 0; i < this->text.size(); i++) {
+            for (int j = 0; j < this->text[i].size(); j++) {
+                if ((text[i][j] == '\'') and (text[i][j + 1] == '\'')) {
+                    start = Cord(i, j);
+                    break;
+                }
+            }
+        }
+
+        if (not(start == Cord(-1, -1))) {
+            this->text[start.x][start.y] = ' ';
+            this->text[start.x][start.y + 1] = ' ';
+            for (int j = start.y + 2; j < this->text[start.x].size(); j++) {
+                if ((text[start.x][j] == '\'') and (text[start.x][j + 1] == '\'')) {
+                    this->text[start.x][j] = ' ';
+                    this->text[start.x][j + 1] = ' ';
+                    break;
+                } else {
+                    this->text[start.x][j] = ' ';
+                }
+            }
+        } else {
+            more_comments = false;
+        }
+    }
+}
+
+Cord *Segmenter::_findDot() { // search text for a non space (' ') or non directional char
+    Cord *c = new Cord;
+    for (int i = 0; i < this->text.size(); i++) {
+        for (int j = 0; j < this->text[i].size(); j++) {
+            if (text[i][j] == '.') {
+                char cord_c = this->text[i][j];
+                bool symbol;
+                for (int s = 0; s < this->_symbols.size(); s++) {
+                    if (this->_symbols[s] == cord_c) {
+                        c->x = i;
+                        c->y = j;
+                        return c;
+                    }
+                }
+            }
+        }
+    }
+    return nullptr;
 }
 
 std::vector<Cord> Segmenter::_validNieghbors(Cord c) {
@@ -208,7 +365,7 @@ std::vector<Cord> Segmenter::_validNieghbors(Cord c) {
     }
     return neighbors;
 }
-// Cord Segmenter::_step(Cord last, Cord current) {}
+Cord Segmenter::_step(Cord last, Cord current) {}
 
 // Cord Segmenter::_step(Cord last, Cord current) {
 
@@ -260,24 +417,29 @@ std::vector<Cord> Segmenter::_validNieghbors(Cord c) {
 //     std::vector<Cord> neighbors;
 // }
 
-Segment Segmenter::_followDirection(Cord *start, bool direction) {
+Segment Segmenter::_followDirection(bool direction) {
 
     Segment seg;
 
     seg.type = "PARTIAL";
 
     Cord prv_cord = Cord(-1, -1);
-    Cord src_cord = *start;
+    Cord dir_cord = Cord(0, 0);
 
     while (true) {
-        char c = this->text[src_cord.x][src_cord.y];
-        char c_l = this->text[src_cord.x][src_cord.y - 1];
+        char c = this->text[this->_cursor.x][this->_cursor.y];
+        char c_l = this->text[this->_cursor.x][this->_cursor.y - 1];
+
+        char merger_pipes[] = {'*', '>', '<', 'v', '^', '(', ')'};
 
         if ((c_l == '[') or (c_l == '{')) { // Check to see if it moved into an operation
             return seg;
 
-        } else {
-            std::vector<Cord> n = this->_validNieghbors(src_cord);
+        } else if((std::find(merger_pipes, merger_pipes, c) != merger_pipes) or std::find(this->_warps.begin(), this->_warps.end(), c) != this->_warps.end()){
+
+        }
+        else {
+            std::vector<Cord> n = this->_validNieghbors(this->_cursor);
             if (c == '.') { // need to check for multiple path ways
 
                 std::vector<Cord> valid_n;
@@ -285,9 +447,9 @@ Segment Segmenter::_followDirection(Cord *start, bool direction) {
                 for (int i = 0; i < n.size(); i++) {
                     Cord n_cord = n[i];
                     char n_c = this->text[n_cord.x][n_cord.y];
-                    if ((n_c == '|') and ((n_cord.x == src_cord.x - 1) or (n_cord.x == src_cord.x + 1))) {
+                    if ((n_c == '|') and ((n_cord.x == this->_cursor.x - 1) or (n_cord.x == this->_cursor.x + 1))) {
                         valid_n.push_back(n_cord);
-                    } else if ((n_c == '-') and ((n_cord.y == src_cord.y - 1) or (n_cord.y == src_cord.y + 1))) {
+                    } else if ((n_c == '-') and ((n_cord.y == this->_cursor.y - 1) or (n_cord.y == this->_cursor.y + 1))) {
                         valid_n.push_back(n_cord);
                     }
                 }
@@ -295,17 +457,16 @@ Segment Segmenter::_followDirection(Cord *start, bool direction) {
                 if (valid_n.size() > 1) {
                     throw std::runtime_error("Multiple pipes to one dot");
                 } else if ((valid_n.size() < 2) and (direction)) {
-                    seg.cords.push_back(src_cord);
-                    seg.outlets.push_back(src_cord);
+                    seg.cords.push_back(this->_cursor);
                     seg.text_data.push_back(c);
-                    prv_cord = src_cord;
-                    src_cord = valid_n[0];
+                    prv_cord = this->_cursor;
+                    this->_cursor = valid_n[0];
                 } else {
                     return seg;
                 }
 
             } else {
-                seg.cords.push_back(src_cord);
+                seg.cords.push_back(this->_cursor);
                 seg.text_data.push_back(c);
 
                 char c_l = ' ';
@@ -317,7 +478,7 @@ Segment Segmenter::_followDirection(Cord *start, bool direction) {
 
                     Cord n_cord = n[i];
                     char n_c = this->text[n_cord.x][n_cord.y];
-                    Cord dir = src_cord - n_cord;
+                    Cord dir = this->_cursor - n_cord;
 
                     bool valid = true;
 
@@ -326,25 +487,25 @@ Segment Segmenter::_followDirection(Cord *start, bool direction) {
                     }
 
                     else if (c == '/') {
-                        if ((src_cord - prv_cord == Cord(0, 1)) and !(dir == Cord(-1, 0))) {
+                        if ((this->_cursor - prv_cord == Cord(0, 1)) and !(dir == Cord(-1, 0))) {
                             valid = false;
-                        } else if ((src_cord - prv_cord == Cord(0, -1)) and !(dir == Cord(1, 0))) {
+                        } else if ((this->_cursor - prv_cord == Cord(0, -1)) and !(dir == Cord(1, 0))) {
                             valid = false;
                         }
                     } else if (c == '\\') {
-                        if ((src_cord - prv_cord == Cord(0, 1)) and !(dir == Cord(1, 0))) {
+                        if ((this->_cursor - prv_cord == Cord(0, 1)) and !(dir == Cord(1, 0))) {
                             valid = false;
-                        } else if ((src_cord - prv_cord == Cord(0, -1)) and !(dir == Cord(-1, 0))) {
+                        } else if ((this->_cursor - prv_cord == Cord(0, -1)) and !(dir == Cord(-1, 0))) {
                             valid = false;
                         }
                     } else {
-                        if ((src_cord - prv_cord == Cord(0, 1)) and !(dir == Cord(0, -1))) {
+                        if ((this->_cursor - prv_cord == Cord(0, 1)) and !(dir == Cord(0, -1))) {
                             valid = false;
-                        } else if ((src_cord - prv_cord == Cord(0, -1)) and !(dir == Cord(0, 1))) {
+                        } else if ((this->_cursor - prv_cord == Cord(0, -1)) and !(dir == Cord(0, 1))) {
                             valid = false;
-                        } else if ((src_cord - prv_cord == Cord(1, 0)) and !(dir == Cord(-1, 0))) {
+                        } else if ((this->_cursor - prv_cord == Cord(1, 0)) and !(dir == Cord(-1, 0))) {
                             valid = false;
-                        } else if ((src_cord - prv_cord == Cord(-1, 0)) and !(dir == Cord(1, 0))) {
+                        } else if ((this->_cursor - prv_cord == Cord(-1, 0)) and !(dir == Cord(1, 0))) {
                             valid = false;
                         }
                     }
@@ -370,19 +531,19 @@ Segment Segmenter::_followDirection(Cord *start, bool direction) {
                 }
 
                 Cord point = s.point(c_l, c_r, c_u, c_d);
-                if (point == Cord(0,0)){
-                    seg.outlets.push_back(src_cord);
+                if (point == Cord(0, 0)) {
+                    // seg.outlets.push_back(this->_cursor);
                     return seg;
-                }else{
-                    prv_cord = src_cord;
-                    src_cord = src_cord + point;
+                } else {
+                    prv_cord = this->_cursor;
+                    this->_cursor = this->_cursor + point;
                 }
             }
         }
     }
 }
 
-Segment Segmenter::_followPath(Cord *cord) { // follows a path from a start point to its ends
+void Segmenter::_followPath() { // follows a path from a start point to its ends
 
     Segment seg;
 
@@ -390,80 +551,57 @@ Segment Segmenter::_followPath(Cord *cord) { // follows a path from a start poin
     bool in_op = false;
     Cord op_cord;
 
-    char c = this->text[cord->x][cord->y];
-    char c_l = this->text[cord->x][cord->y - 1];
+    char c = this->text[this->_cursor.x][this->_cursor.y];
+    char c_l = this->text[this->_cursor.x][this->_cursor.y - 1];
 
     if ((c == '[') or (c == ']') or (c == '{') or (c == '}')) {
         in_op = true;
         if ((c == '[') or (c == '{'))
-            op_cord = *cord;
+            op_cord = this->_cursor;
         else {
-            op_cord = *cord + Cord(0, -2);
+            op_cord = this->_cursor + Cord(0, -2);
         }
     } else if ((c_l == '[') or (c_l == '{')) {
         in_op = true;
-        op_cord = *cord + Cord(0, -1);
+        op_cord = this->_cursor + Cord(0, -1);
     }
 
-    if (in_op) { // If the path is in an operation create an easy segment
+    if (in_op) { 
         seg.type = "OPERATION";
         for (int i = 0; i < 3; i++) {
-            Cord c = *cord + Cord(0, i);
+            Cord c = this->_cursor + Cord(0, i);
             seg.cords.push_back(c);
             seg.text_data.push_back(this->text[c.x][c.y]);
         }
 
-        seg.outlets.push_back(*cord + Cord(0, -1));
-        seg.outlets.push_back(*cord + Cord(0, 3));
-        seg.outlets.push_back(*cord + Cord(1, 1));
-        seg.outlets.push_back(*cord + Cord(-1, 1));
-
-        return seg;
+        seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor, this->_cursor + Cord(0, -1)));
+        seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor + Cord(0, 2), this->_cursor + Cord(0, 3)));
+        seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor + Cord(0, 1), this->_cursor + Cord(1, 1)));
+        seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor + Cord(0, 1), this->_cursor + Cord(-1, 1)));
+        
     }
 
-    else {
 
-        // segment search starts from the same place but haas different directions
-        Segment left = this->_followDirection(cord, false);
-        Segment right = this->_followDirection(cord, true);
-
-        // combine the left and right segments
-
-        seg.type = "UNORDERED";
-
-        for (int i = 0; i < left.cords.size(); i++) {
-            seg.cords.push_back(left.cords[i]);
-            seg.text_data.push_back(left.text_data[i]);
-        }
-        for (int i = 0; i < right.cords.size(); i++) {
-            seg.cords.push_back(right.cords[i]);
-            seg.text_data.push_back(right.text_data[i]);
-        }
-        for (int i = 0; i < left.outlets.size(); i++) {
-            seg.outlets.push_back(left.outlets[i]);
-        }
-        for (int i = 0; i < right.outlets.size(); i++) {
-            seg.outlets.push_back(right.outlets[i]);
-        }
-
-        // TODO: order the segment into a left to right line
-        //  Code: 
-
-        return seg;
-    }
 }
 
 std::vector<Segment> Segmenter::getSegments() { // get the ordered segments of the text
 
     std::vector<Segment> segs_list;
 
+    this->_deleteComments();
+    this->printText();
+    std::cout << '\n';
+    this->cropText();
+    this->printText();
+    std::cout << '\n';
+
     while (true) {
 
-        Cord *c = this->_findChar(); // find a potential segment
+        Cord *c = this->_findDot(); // find a potential segment
 
         if (c != nullptr) {
-
-            Segment s = this->_followPath(c); // get the segment from that path
+            this->_cursor = *c;
+            Segment s = this->_followPath(); // get the segment from that path
             segs_list.push_back(s);
 
         } else {
@@ -471,6 +609,72 @@ std::vector<Segment> Segmenter::getSegments() { // get the ordered segments of t
             return segs_list;
         }
     }
+}
+
+void Segmenter::printText() {
+    for (int i = 0; i < this->text.size(); i++) {
+        for (int j = 0; j < this->text[i].size(); j++) {
+            std::cout << this->text[i][j];
+        }
+        std::cout << "\n";
+    }
+}
+
+void Segmenter::cropText() {
+    std::vector<int> row_crop;
+    std::vector<int> colomn_crop;
+
+    for (int i = 0; i < this->text.size(); i++) {
+        bool del = true;
+        for (int j = 0; j < this->text[i].size(); j++) {
+            if (this->text[i][j] != ' ') {
+                del = false;
+                break;
+            }
+        }
+        if (!del) {
+            row_crop.push_back(i);
+        }
+    }
+
+    bool going = true;
+    int col = 0;
+
+    while (going) {
+
+        bool del = true;
+        going = false;
+
+        for (int i = 0; i < this->text.size(); i++) {
+            if (col < this->text[i].size()) {
+                going = true;
+                if (this->text[i][col] != ' ') {
+                    del = false;
+                }
+            }
+        }
+        if (!del) {
+            colomn_crop.push_back(col);
+        }
+
+        col++;
+    }
+
+    std::vector<std::vector<char>> new_text;
+    for (int i = 0; i < this->text.size(); i++) {
+        if (std::find(row_crop.begin(), row_crop.end(), i) != row_crop.end()) {
+            std::vector<char> row;
+            for (int j = 0; j < this->text[i].size(); j++) {
+                if (std::find(colomn_crop.begin(), colomn_crop.end(), j) != colomn_crop.end()) {
+                    row.push_back(this->text[i][j]);
+                }
+            }
+            if (row.size() > 0) {
+                new_text.push_back(row);
+            }
+        }
+    }
+    this->text = new_text;
 }
 
 } // namespace segmenter
