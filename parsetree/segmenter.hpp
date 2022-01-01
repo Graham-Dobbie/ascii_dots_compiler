@@ -78,17 +78,21 @@ class Segmenter {
     std::vector<std::string> _libs_used;
     std::vector<char> _warps;
 
-    
     void _fuction_data_scan();
     void _deleteComments();
 
-    void _followPath();
+    Cord _getDot(Cord c);
+    void _getOp(Cord c);
+     
+
+    void _followPath(Cord src, Cord next);
+
     Segment _followDirection(bool direction);
 
     std::vector<Cord> _validNieghbors(Cord c);
 
   public:
-    Cord _step(Cord last, Cord current);
+    std::pair<Cord,Cord> _step(Cord src, Cord dir);
     Cord *_findDot();
     std::vector<Segment> segments;
 

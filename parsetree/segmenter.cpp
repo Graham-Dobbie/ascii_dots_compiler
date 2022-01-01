@@ -337,15 +337,9 @@ Cord *Segmenter::_findDot() { // search text for a non space (' ') or non direct
     for (int i = 0; i < this->text.size(); i++) {
         for (int j = 0; j < this->text[i].size(); j++) {
             if (text[i][j] == '.') {
-                char cord_c = this->text[i][j];
-                bool symbol;
-                for (int s = 0; s < this->_symbols.size(); s++) {
-                    if (this->_symbols[s] == cord_c) {
-                        c->x = i;
-                        c->y = j;
-                        return c;
-                    }
-                }
+                c->x = i;
+                c->y = j;
+                return c;
             }
         }
     }
@@ -365,7 +359,41 @@ std::vector<Cord> Segmenter::_validNieghbors(Cord c) {
     }
     return neighbors;
 }
-Cord Segmenter::_step(Cord last, Cord current) {}
+
+std::pair<Cord, Cord> Segmenter::_step(Cord src, Cord dir) {
+
+    if ((src.x >= 0) and (src.x < this->text.size())) {
+        if ((src.y >= 0) and (src.y < this->text[src.x].size())) {
+            Cord new_dir;
+
+            char c = this->text[src.x][src.y];
+
+            if (c == '/') {
+                new_dir = Cord(-dir.y, -dir.x);
+            } else if (c == '\\') {
+                new_dir = Cord(dir.y, dir.x);
+            } else if (c == ' ') {
+                Cord new_src = Cord(-1, -1);
+                Cord new_dir = Cord(0, 0);
+                return std::pair<Cord, Cord>(new_src, new_dir);
+            } else {
+                new_dir = dir;
+            }
+
+            Cord new_src = src + new_dir;
+            return std::pair<Cord, Cord>(new_src, new_dir);
+        } else {
+            Cord new_src = Cord(-1, -1);
+            Cord new_dir = Cord(0, 0);
+            return std::pair<Cord, Cord>(new_src, new_dir);
+        }
+
+    } else {
+        Cord new_src = Cord(-1, -1);
+        Cord new_dir = Cord(0, 0);
+        return std::pair<Cord, Cord>(new_src, new_dir);
+    }
+}
 
 // Cord Segmenter::_step(Cord last, Cord current) {
 
@@ -435,10 +463,9 @@ Segment Segmenter::_followDirection(bool direction) {
         if ((c_l == '[') or (c_l == '{')) { // Check to see if it moved into an operation
             return seg;
 
-        } else if((std::find(merger_pipes, merger_pipes, c) != merger_pipes) or std::find(this->_warps.begin(), this->_warps.end(), c) != this->_warps.end()){
+        } else if ((std::find(merger_pipes, merger_pipes, c) != merger_pipes) or std::find(this->_warps.begin(), this->_warps.end(), c) != this->_warps.end()) {
 
-        }
-        else {
+        } else {
             std::vector<Cord> n = this->_validNieghbors(this->_cursor);
             if (c == '.') { // need to check for multiple path ways
 
@@ -543,45 +570,130 @@ Segment Segmenter::_followDirection(bool direction) {
     }
 }
 
-void Segmenter::_followPath() { // follows a path from a start point to its ends
+Cord Segmenter::_getDot(Cord c) {
+    std::vector<Cord> n = this->_validNieghbors(c);
+    std::vector<Cord> valid_n;
+
+    for (int i = 0; i < n.size(); i++) {
+        Cord n_cord = n[i];
+        char n_c = this->text[n_cord.x][n_cord.y];
+        if ((n_c == '|') and ((n_cord.x == c.x - 1) or (n_cord.x == c.x + 1))) {
+            valid_n.push_back(n_cord);
+        } else if ((n_c == '-') and ((n_cord.y == c.y - 1) or (n_cord.y == c.y + 1))) {
+            valid_n.push_back(n_cord);
+        }
+    }
+    if (valid_n.size() > 1) {
+        throw std::runtime_error("Multiple pipes to one dot");
+    } else if (valid_n.size() < 2) {
+        return valid_n[0];
+    } else {
+        return Cord(-1, -1);
+    }
+}
+
+void Segmenter::_getOp(Cord c) {
 
     Segment seg;
 
-    // Checking to see if the path is a operation
-    bool in_op = false;
+    seg.type = "OPERATION";
+    for (int i = 0; i < 3; i++) {
+        Cord c = this->_cursor + Cord(0, i);
+        seg.cords.push_back(c);
+        seg.text_data.push_back(this->text[c.x][c.y]);
+    }
+
+    seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor, this->_cursor + Cord(0, -1)));
+    seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor + Cord(0, 2), this->_cursor + Cord(0, 3)));
+    seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor + Cord(0, 1), this->_cursor + Cord(1, 1)));
+    seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor + Cord(0, 1), this->_cursor + Cord(-1, 1)));
+}
+
+void Segmenter::_followPath(Cord start, Cord next) { // follows a path from a start point to its ends
+
+    Segment seg;
+
+    Cord src = start;
+    Cord dir = next - src;
+
     Cord op_cord;
 
-    char c = this->text[this->_cursor.x][this->_cursor.y];
-    char c_l = this->text[this->_cursor.x][this->_cursor.y - 1];
+    bool in_path = true;
+    bool in_op = false;
+    bool in_merger = false;
 
-    if ((c == '[') or (c == ']') or (c == '{') or (c == '}')) {
-        in_op = true;
-        if ((c == '[') or (c == '{'))
-            op_cord = this->_cursor;
-        else {
-            op_cord = this->_cursor + Cord(0, -2);
-        }
-    } else if ((c_l == '[') or (c_l == '{')) {
-        in_op = true;
-        op_cord = this->_cursor + Cord(0, -1);
-    }
+    char merger_pipes[] = {'*', '>', '<', 'v', '^', '(', ')'};
 
-    if (in_op) { 
-        seg.type = "OPERATION";
-        for (int i = 0; i < 3; i++) {
-            Cord c = this->_cursor + Cord(0, i);
-            seg.cords.push_back(c);
-            seg.text_data.push_back(this->text[c.x][c.y]);
+    while (in_path) {
+        char c = ' ';
+        char c_l = ' ';
+        if ((src.x >= 0) and (src.x < this->text.size())) {
+            if ((src.y >= 0) and (src.y < this->text[src.x].size())) {
+                c = this->text[src.x][src.y];
+                c_l = this->text[src.x][src.y - 1];
+            } else {
+                in_path = false;
+            }
+        } else {
+            in_path = false;
         }
 
-        seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor, this->_cursor + Cord(0, -1)));
-        seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor + Cord(0, 2), this->_cursor + Cord(0, 3)));
-        seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor + Cord(0, 1), this->_cursor + Cord(1, 1)));
-        seg.outlets.push_back(std::pair<Cord, Cord>(this->_cursor + Cord(0, 1), this->_cursor + Cord(-1, 1)));
-        
+        // Ckeck to see if its
+        if (c == '.') { // need to check for multiple path ways
+            seg.cords.push_back(src);
+            seg.text_data.push_back(c);
+
+            Cord next_cord = this->_getDot(src);
+
+            if (!(next_cord == Cord(-1, -1))) {
+                dir = next_cord - src;
+                src = next_cord;
+            } else {
+                in_path = false;
+            }
+        } else if ((std::find(merger_pipes, merger_pipes, c) != merger_pipes) or (std::find(this->_warps.begin(), this->_warps.end(), c) != this->_warps.end())) {
+            seg.outlets.push_back(std::pair<Cord, Cord>(src - dir, src));
+            in_merger = true;
+            in_path = false;
+        }
+
+        // Checking to see if the path is a operation
+
+        if ((c == '[') or (c == ']') or (c == '{') or (c == '}')) {
+            in_op = true;
+            in_path = false;
+            if ((c == '[') or (c == '{'))
+                op_cord = src;
+            else {
+                op_cord = src + Cord(0, -2);
+            }
+        } else if ((c_l == '[') or (c_l == '{')) {
+            in_op = true;
+            in_path = false;
+            op_cord = src + Cord(0, -1);
+        }
+
+        if (in_path) {
+
+            std::pair<Cord, Cord> cords = this->_step(src, dir);
+
+            Cord next_cord = cords.first;
+
+            if (!(next_cord == Cord(-1, -1))) {
+                seg.cords.push_back(src);
+                seg.text_data.push_back(c);
+                dir = cords.second;
+                src = next_cord;
+            } else {
+                in_path = false;
+            }
+        }
     }
+    this->segments.push_back(seg);
 
-
+    if (in_op) {
+        this->_getOp(op_cord);
+    }
 }
 
 std::vector<Segment> Segmenter::getSegments() { // get the ordered segments of the text
@@ -600,9 +712,7 @@ std::vector<Segment> Segmenter::getSegments() { // get the ordered segments of t
         Cord *c = this->_findDot(); // find a potential segment
 
         if (c != nullptr) {
-            this->_cursor = *c;
-            Segment s = this->_followPath(); // get the segment from that path
-            segs_list.push_back(s);
+            this->_followPath(*c, Cord(-1, -1)); // get the segment from that path
 
         } else {
 
