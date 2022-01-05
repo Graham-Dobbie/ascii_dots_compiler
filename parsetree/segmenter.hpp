@@ -24,24 +24,6 @@ class Cord {
     void print();
 };
 
-class Symbol {
-
-  private:
-    std::map<std::string, std::pair<std::regex, Cord>> _directions;
-
-  public:
-    Symbol();
-
-    Symbol(char name, std::regex left, std::regex right, std::regex up, std::regex down);
-    Symbol(char name, std::map<std::string, std::pair<std::regex, Cord>> directions);
-
-    Cord point(char left, char right, char up, char down);
-
-    bool operator==(const char &c);
-
-    char name;
-};
-
 // Token class stores the type and value the tokenizer scans from the source code
 class Segment {
 
@@ -65,12 +47,7 @@ class Segment {
 class Segmenter {
 
   private:
-    Cord _cursor = Cord();
-
     std::vector<std::vector<char>> text;
-
-    std::vector<char> _symbols;
-    Symbol _any_char;
 
     std::vector<Segment> _segs;
 
@@ -81,12 +58,15 @@ class Segmenter {
     void _fuction_data_scan();
     void _deleteComments();
 
+    Cord *_findDot();
+
     Cord _getDot(Cord c);
     void _getOp(Cord c);
     void _getMerger(Cord c);
 
     void _eraseSeg(std::vector<Cord> cords);
 
+    std::pair<Cord, Cord> _step(Cord src, Cord dir);
     void _followPath(Cord start, Cord next, bool begining);
 
     Segment _getQuote(Segment seg, Cord src, Cord dir);
@@ -95,23 +75,17 @@ class Segmenter {
     std::vector<Cord> _validNieghbors(Cord c);
 
   public:
-    std::pair<Cord,Cord> _step(Cord src, Cord dir);
-    Cord *_findDot();
-    std::vector<Segment> segments;
-
     Segmenter();
-
     Segmenter(std::vector<std::string> raw_text);
-    void setString(std::string m); // Gives sources code to tokenizer
 
     std::vector<Segment> getSegments(); // Returns the all segments of the source code
 
-    void printText();
-    void cropText();
+    void printText(); // Prints text
+    void cropText();  // Crops text
 
     bool isEnd(); // Returns true if the source code is finished
 };
 
-} // namespace segmenter
+} // namespace
 
 #endif
