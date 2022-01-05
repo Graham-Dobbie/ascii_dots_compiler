@@ -69,7 +69,7 @@ class Segmenter {
 
     std::vector<std::vector<char>> text;
 
-    std::vector<Symbol> _symbols;
+    std::vector<char> _symbols;
     Symbol _any_char;
 
     std::vector<Segment> _segs;
@@ -83,10 +83,13 @@ class Segmenter {
 
     Cord _getDot(Cord c);
     void _getOp(Cord c);
-     
+    void _getMerger(Cord c);
 
-    void _followPath(Cord src, Cord next);
+    void _eraseSeg(std::vector<Cord> cords);
 
+    void _followPath(Cord start, Cord next, bool begining);
+
+    Segment _getQuote(Segment seg, Cord src, Cord dir);
     Segment _followDirection(bool direction);
 
     std::vector<Cord> _validNieghbors(Cord c);
