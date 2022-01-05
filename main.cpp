@@ -43,7 +43,6 @@ int main() {
     }
 
     Segmenter segmenter(raw_text);
-
-    segmenter.getSegments();
+    std::vector<Segment> segs = segmenter.getSegments();
 
 }
