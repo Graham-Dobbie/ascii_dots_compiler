@@ -44,5 +44,6 @@ int main() {
 
     Segmenter segmenter(raw_text);
     std::vector<Segment> segs = segmenter.getSegments();
+    std::cout << std::endl;
 
 }
