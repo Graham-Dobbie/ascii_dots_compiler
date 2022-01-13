@@ -77,37 +77,68 @@ Segmenter::Segmenter() {}
 
 Segmenter::Segmenter(std::vector<std::string> raw_text) {
 
+    this->_prep_text(raw_text);
+    this->printText();
+    std::cout << std::endl;
+
+    std::cout << "Warps:" << std::endl;
+    for (int i = 0; i < this->_warps.size(); i++) {
+        std::cout << this->_warps[i] << ", ";
+    }
+
+    std::cout << std::endl;
+
+    std::cout << "Libs:" << std::endl;
+    for (int i = 0; i < this->_libs_used.size(); i++) {
+        std::cout << this->_libs_used[i] << ", ";
+    }
+
+    std::cout << std::endl;
+    std::cout << "Lib Warp:" << std::endl;
+    std::cout << this->_lib_warp;
+    std::cout << std::endl;
+}
+
+void Segmenter::_prep_text(std::vector<std::string> raw_text) {
+
     for (int i = 0; i < raw_text.size(); i++) { // convert raw text
         std::vector<char> app_vec;
+        std::vector<int> pass_app_vec;
         for (int j = 0; j < raw_text[i].size(); j++) {
             app_vec.push_back(raw_text[i][j]);
         }
         this->text.push_back(app_vec);
     }
 
-    for (int i = 0; i < text.size(); i++) { // print raw text
-        for (int j = 0; j < text[i].size(); j++) {
-            std::cout << text[i][j];
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-
+    this->_deleteComments();
     this->_fuction_data_scan(); // scan for libaries, warps and libary warps
-    std::cout << "Warps:" << std::endl;
-    for (int i = 0; i < this->_warps.size(); i++) {
-        std::cout << this->_warps[i] << '\n';
-    }
-    std::cout << std::endl;
+    this->cropText();
 
-    std::cout << "Libs:" << std::endl;
-    for (int i = 0; i < this->_libs_used.size(); i++) {
-        std::cout << this->_libs_used[i] << '\n';
+    std::vector<char> non_bicons;
+    char symbols[] = {'-', '|', '.', '>', '<', '^', 'v', '(', ')', '*', '~', '{', '}', '[', ']', '"', '\''};
+
+    for (int i = 0; i < sizeof(symbols); i++) { // Adding symbols as symbols
+        non_bicons.push_back(symbols[i]);
     }
-    std::cout << std::endl;
-    std::cout << "Lib Warp:" << std::endl;
-    std::cout << this->_lib_warp;
-    std::cout << std::endl;
+
+    for (int i = 0; i < this->_warps.size(); i++) { // Adding warps as symbols
+        non_bicons.push_back(this->_warps[i]);
+    }
+
+    for (int i = 0; i < raw_text.size(); i++) { // For the eraser function tells how many passes a char needs untill its erased
+        std::vector<int> pass_app_vec;
+        for (int j = 0; j < raw_text[i].size(); j++) {
+
+            if (std::find(non_bicons.begin(), non_bicons.end(), this->text[i][j]) != non_bicons.end()) {
+                pass_app_vec.push_back(1);
+            } else if (this->text[i][j] == ' ') {
+                pass_app_vec.push_back(0);
+            } else {
+                pass_app_vec.push_back(2);
+            }
+        }
+        this->_erase_passes.push_back(pass_app_vec);
+    }
 }
 
 void Segmenter::_fuction_data_scan() {
@@ -118,7 +149,7 @@ void Segmenter::_fuction_data_scan() {
 
                 char invalid_chars[] = {' ', '-', '|', '/', '\\', '.', '>', '<', '^', 'V', '(', ')', '*', '~', '+', '{', '}', '[',  ']', '_',
                                         'a', '!', '#', '$', '1',  '2', '3', '4', '5', '6', '7', '8', '9', '0', '@', '%', '"', '\'', '?', '$'};
-                
+
                 // parses the Lib warp
                 if (text[i][1] == '^') {
 
@@ -135,7 +166,7 @@ void Segmenter::_fuction_data_scan() {
                     } else {
                         throw std::runtime_error("Idk why you are here");
                     }
-                // parses the libs useds
+                    // parses the libs useds
                 } else if (text[i][1] == '!') {
 
                     std::string lib_str = "";
@@ -166,7 +197,7 @@ void Segmenter::_fuction_data_scan() {
                     } else {
                         throw std::runtime_error("Idk why you are here");
                     }
-                //parses the warps used
+                    // parses the warps used
                 } else if (text[i][1] == '$') {
                     this->text[i][0] = ' ';
                     this->text[i][1] = ' ';
@@ -206,7 +237,7 @@ void Segmenter::_deleteComments() {
 
         for (int i = 0; i < this->text.size(); i++) {
             for (int j = 0; j < this->text[i].size(); j++) {
-                if ((text[i][j] == '\'') and (text[i][j + 1] == '\'')) {
+                if ((text[i][j] == '`') and (text[i][j + 1] == '`')) {
                     start = Cord(i, j);
                     break;
                 }
@@ -231,11 +262,25 @@ void Segmenter::_deleteComments() {
     }
 }
 
-Cord *Segmenter::_findDot() { // search text for a non space (' ') or non directional char
+Cord *Segmenter::_findDot() { // search text for a period
     Cord *c = new Cord;
     for (int i = 0; i < this->text.size(); i++) {
         for (int j = 0; j < this->text[i].size(); j++) {
             if (text[i][j] == '.') {
+                c->x = i;
+                c->y = j;
+                return c;
+            }
+        }
+    }
+    return nullptr;
+}
+
+Cord *Segmenter::_findFunc() { // search text for a function
+    Cord *c = new Cord;
+    for (int i = 0; i < this->text.size(); i++) {
+        for (int j = 0; j < this->text[i].size(); j++) {
+            if (std::find(this->_warps.begin(), this->_warps.end(), this->text[i][j]) != this->_warps.end()) {
                 c->x = i;
                 c->y = j;
                 return c;
@@ -284,13 +329,13 @@ std::pair<Cord, Cord> Segmenter::_step(Cord src, Cord dir) {
         } else {
             Cord new_src = Cord(-1, -1);
             Cord new_dir = Cord(0, 0);
-            return std::pair<Cord, Cord>(new_src, new_dir); 
+            return std::pair<Cord, Cord>(new_src, new_dir);
         }
 
     } else {
         Cord new_src = Cord(-1, -1);
         Cord new_dir = Cord(0, 0);
-        return std::pair<Cord, Cord>(new_src, new_dir); //ik this is repetivie code fight me
+        return std::pair<Cord, Cord>(new_src, new_dir); // ik this is repetivie code fight me
     }
 }
 
@@ -323,7 +368,7 @@ void Segmenter::_getOp(Cord c) {
     seg.type = "OPERATION";
     for (int i = 0; i < 3; i++) { // go horizontaly by three and make the seg/erase it
 
-        Cord next_c = c + Cord(0, i); //Make seg
+        Cord next_c = c + Cord(0, i); // Make seg
 
         seg.cords.push_back(next_c);
         seg.text_data.push_back(this->text[next_c.x][next_c.y]);
@@ -374,7 +419,7 @@ void Segmenter::_getMerger(Cord c) {
     this->_eraseSeg(seg.cords);
     this->printText();
 
-    // Follow the outlets 
+    // Follow the outlets
     for (int i = 0; i < seg.outlets.size(); i++) {
 
         Cord src = seg.outlets[i].first;
@@ -387,27 +432,20 @@ void Segmenter::_getMerger(Cord c) {
 
 void Segmenter::_eraseSeg(std::vector<Cord> cords) { // This is  solid 2/10 function still needs work
 
-    std::vector<char> forbd_symbols;
-    char symbols[] = {' ', '-', '|', '.', '>', '<', '^', 'V', '(', ')', '*', '~', '{', '}', '[', ']', '"', '\''};
-
-    for (int i = 0; i < sizeof(symbols); i++) { // Adding symbols as symbols
-        forbd_symbols.push_back(symbols[i]);
-    }
-
-    for (int i = 0; i < this->_warps.size(); i++) { // Adding warps as symbols
-        forbd_symbols.push_back(this->_warps[i]);
-    }
-
-    // Forbiden symbols are just symbols that aren't bidirectional that you  want to delete after one pass
+    // non_bicons symbols are just symbols that aren't bicons that you want to delete after one pass
 
     for (int i = 0; i < cords.size(); i++) {
 
         Cord cord = cords[i];
         char c = this->text[cord.x][cord.y];
+        int pass = this->_erase_passes[cord.x][cord.y];
 
         // If its forbin then do the kickin
-        if (std::find(forbd_symbols.begin(), forbd_symbols.end(), c) != forbd_symbols.end()) {
+        if (pass == 2) {
+            this->_erase_passes[cord.x][cord.y]--;
+        }else if(pass == 1){
             this->text[cord.x][cord.y] = ' ';
+            this->_erase_passes[cord.x][cord.y]--;
         }
     }
 }
@@ -453,7 +491,7 @@ void Segmenter::_followPath(Cord start, Cord next, bool begining) { // follows a
     bool in_op = false;
     bool in_merger = false;
 
-    char merger_pipes[] = {'*', '>', '<', 'v', '^', '(', ')'};
+    char merger_pipes[] = {'*', '>', '<', 'v', '^', '(', ')', '~'};
 
     // starts a loop that steps through a set of pipes and stops at a merger/op type char set
     while (in_path) {
@@ -567,7 +605,12 @@ std::vector<Segment> Segmenter::getSegments() { // get the ordered segments of t
             this->_followPath(*c, Cord(-1, -1), true); // get the segment from that path
 
         } else {
-            return this->_segs;
+            Cord *func_cord = this->_findFunc();
+            if (func_cord != nullptr) {
+                this->_getMerger(*func_cord);
+            } else {
+                return this->_segs;
+            }
         }
     }
 }
@@ -585,48 +628,60 @@ void Segmenter::cropText() {
     std::vector<int> row_crop;
     std::vector<int> colomn_crop;
 
-    for (int i = 0; i < this->text.size(); i++) {
-        bool del = true;
-        for (int j = 0; j < this->text[i].size(); j++) {
-            if (this->text[i][j] != ' ') {
+    bool going = true;
+    int row = 0;
+
+    while (going) {
+        bool del = false;
+
+        for (int i = 0; i < this->text[row].size(); i++) {
+            char c = this->text[row][i];
+            if (c != ' ') {
+                going = false;
                 del = false;
                 break;
+            } else {
+                del = true;
             }
         }
-        if (!del) {
-            row_crop.push_back(i);
+
+        if(del){
+            row_crop.push_back(row);
         }
+        row++;
     }
 
-    bool going = true;
+    going = true;
     int col = 0;
 
     while (going) {
-
-        bool del = true;
-        going = false;
+        bool del = false;
 
         for (int i = 0; i < this->text.size(); i++) {
             if (col < this->text[i].size()) {
                 going = true;
-                if (this->text[i][col] != ' ') {
+                char c = this->text[i][col];
+                if (c != ' ') {
+                    going = false;
                     del = false;
+                    break;
+                } else {
+                    del =true;
                 }
             }
         }
-        if (!del) {
+        if(del){
             colomn_crop.push_back(col);
         }
-
         col++;
     }
 
     std::vector<std::vector<char>> new_text;
     for (int i = 0; i < this->text.size(); i++) {
-        if (std::find(row_crop.begin(), row_crop.end(), i) != row_crop.end()) {
+        if (std::find(row_crop.begin(), row_crop.end(), i) == row_crop.end()) {
             std::vector<char> row;
             for (int j = 0; j < this->text[i].size(); j++) {
-                if (std::find(colomn_crop.begin(), colomn_crop.end(), j) != colomn_crop.end()) {
+                if (std::find(colomn_crop.begin(), colomn_crop.end(), j) == colomn_crop.end()) {
                     row.push_back(this->text[i][j]);
                 }
             }

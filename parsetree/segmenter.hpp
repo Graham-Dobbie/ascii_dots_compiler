@@ -48,6 +48,7 @@ class Segmenter {
 
   private:
     std::vector<std::vector<char>> text;
+    std::vector<std::vector<int>> _erase_passes;
 
     std::vector<Segment> _segs;
 
@@ -57,8 +58,10 @@ class Segmenter {
 
     void _fuction_data_scan();
     void _deleteComments();
+    void _prep_text(std::vector<std::string> raw_text);
 
     Cord *_findDot();
+    Cord *_findFunc();
 
     Cord _getDot(Cord c);
     void _getOp(Cord c);
