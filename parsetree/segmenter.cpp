@@ -77,8 +77,9 @@ Segmenter::Segmenter() {}
 
 Segmenter::Segmenter(std::vector<std::string> raw_text) {
 
+    this->_lib_warp = '\0';
+
     this->_prep_text(raw_text);
-    this->printText();
     std::cout << std::endl;
 
     std::cout << "Warps:" << std::endl;
@@ -166,8 +167,8 @@ void Segmenter::_fuction_data_scan() {
                     } else {
                         throw std::runtime_error("Idk why you are here");
                     }
-                    // parses the libs useds
-                } else if (text[i][1] == '!') {
+
+                } else if (text[i][1] == '!') { // parses the libs useds
 
                     std::string lib_str = "";
 
@@ -354,7 +355,7 @@ Cord Segmenter::_getDot(Cord c) {
     }
     if (valid_n.size() > 1) {
         throw std::runtime_error("Multiple pipes to one dot");
-    } else if (valid_n.size() < 2) {
+    } else if (valid_n.size() == 1) {
         return valid_n[0];
     } else {
         return Cord(-1, -1);
@@ -383,7 +384,6 @@ void Segmenter::_getOp(Cord c) {
     seg.outlets.push_back(std::pair<Cord, Cord>(c + Cord(0, 1), c + Cord(-1, 1)));
 
     this->_segs.push_back(seg);
-    this->printText();
 
     // On each outlet folow the next segs
     for (int i = 0; i < seg.outlets.size(); i++) {
@@ -394,6 +394,7 @@ void Segmenter::_getOp(Cord c) {
 
         this->_followPath(start, next, false);
     }
+    this->printText();
 }
 
 void Segmenter::_getMerger(Cord c) {
@@ -417,7 +418,6 @@ void Segmenter::_getMerger(Cord c) {
 
     this->_segs.push_back(seg);
     this->_eraseSeg(seg.cords);
-    this->printText();
 
     // Follow the outlets
     for (int i = 0; i < seg.outlets.size(); i++) {
@@ -428,6 +428,7 @@ void Segmenter::_getMerger(Cord c) {
 
         this->_followPath(start, next, false);
     }
+    this->printText();
 }
 
 void Segmenter::_eraseSeg(std::vector<Cord> cords) { // This is  solid 2/10 function still needs work
@@ -443,7 +444,7 @@ void Segmenter::_eraseSeg(std::vector<Cord> cords) { // This is  solid 2/10 func
         // If its forbin then do the kickin
         if (pass == 2) {
             this->_erase_passes[cord.x][cord.y]--;
-        }else if(pass == 1){
+        } else if (pass == 1) {
             this->text[cord.x][cord.y] = ' ';
             this->_erase_passes[cord.x][cord.y]--;
         }
@@ -522,6 +523,7 @@ void Segmenter::_followPath(Cord start, Cord next, bool begining) { // follows a
             if ((!(next_cord == Cord(-1, -1)) and begining)) { // if its starting set the direction
                 dir = next_cord - src;
                 src = next_cord;
+                begining = false;
             } else { // end the path
                 in_path = false;
             }
@@ -645,7 +647,7 @@ void Segmenter::cropText() {
             }
         }
 
-        if(del){
+        if (del) {
             row_crop.push_back(row);
         }
         row++;
@@ -666,11 +668,11 @@ void Segmenter::cropText() {
                     del = false;
                     break;
                 } else {
-                    del =true;
+                    del = true;
                 }
             }
         }
-        if(del){
+        if (del) {
             colomn_crop.push_back(col);
         }
         col++;
