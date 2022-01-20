@@ -101,30 +101,30 @@ class Grammar {
 };
 
 // Is a parse tree node that stores relevant information
-class Node {
+class ParseNode {
   public:
-    Node();
-    Node(Node *parent_node_ptr, std::string type, std::vector<Node *> children);
+    ParseNode();
+    ParseNode(ParseNode *parent_node_ptr, std::string type, std::vector<ParseNode *> children);
 
     std::string value;
     std::map<std::string, std::string> data;
-    std::vector<Node *> children;
+    std::vector<ParseNode *> children;
 
-    std::vector<Node *> getChildren();
+    std::vector<ParseNode *> getChildren();
     std::string getType();
 
     bool isNull(); // determineds if the node is null
 
     void print(int depth); // recursive print
 
-    Node *_parent_node_ptr;
+    ParseNode *_parent_node_ptr;
 };
 
 // Parse Tree class condains a root node and methods to parse different tokens
 class ConcreteSyntacticalTree {
   private:
-    Node *_root_node;
-    Node *_header_node;
+    ParseNode *_root_node;
+    ParseNode *_header_node;
 
     std::vector<Grammar> _G;
     Grammar _root_grammar;
@@ -139,19 +139,19 @@ class ConcreteSyntacticalTree {
 
     std::pair<Grammar, Token> _error;
 
-    Node *_parse(Grammar G, Character C, int token_number); // recurisive desent parser
+    ParseNode *_parse(Grammar G, Character C, int token_number); // recurisive desent parser
 
-    void _trimTree(Node *node); // trim the tree for cst to ast translation
+    void _trimTree(ParseNode *node); // trim the tree for cst to ast translation
 
-    Node *_makeDataNode(Token t); // constructs data nodes for trees
+    ParseNode *_makeDataNode(Token t); // constructs data nodes for trees
 
     void _makeGrammar(); // removes left recursion in the BNF grammer
 
-    void _helpPrint(Node start_node, int depth);
+    void _helpPrint(ParseNode start_node, int depth);
 
-    void _mergePrimes(Node *node); // helps trim tree
+    void _mergePrimes(ParseNode *node); // helps trim tree
 
-    void _ridEpsilons(Node *node); // helps trim tree
+    void _ridEpsilons(ParseNode *node); // helps trim tree
 
   public:
     ConcreteSyntacticalTree();
@@ -161,7 +161,7 @@ class ConcreteSyntacticalTree {
 
     void makeTree(); // uses lexer and grammar rules to make a concrete syntactical tree of nodes
 
-    Node *getTreeHeader(); // returns the root node of the tree
+    ParseNode *getTreeHeader(); // returns the root node of the tree
 
     void readF(std::string src); // work in progress
 

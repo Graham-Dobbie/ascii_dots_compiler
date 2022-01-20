@@ -401,23 +401,38 @@ void Segmenter::_getMerger(Cord c) {
 
     Segment seg;
 
+    seg.type = "MERGER";
+
     char cord_c = this->text[c.x][c.y];
     seg.cords.push_back(c);
     seg.text_data.push_back(cord_c);
 
-    seg.type = "MERGER";
+    Cord down_cord = c + Cord(1, 0);
+    char down_cord_c = this->text[down_cord.x][down_cord.y];
 
-    // Its four outlets if not the parenthesis fuck the parenthesis
-    seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(0, -1)));
-    seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(0, 1)));
+    if ((down_cord_c == '!') and (cord_c == '~')) {
 
-    if ((cord_c != ')') and (cord_c != '(')) { // hot people have four outlets
-        seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(1, 0)));
+        seg.cords.push_back(down_cord);
+        seg.text_data.push_back(down_cord_c);
+
+        seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(0, -1)));
+        seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(0, 1)));
         seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(-1, 0)));
-    }
+        seg.outlets.push_back(std::pair<Cord, Cord>(down_cord, down_cord + Cord(1, 0)));
+        this->_segs.push_back(seg);
+    } else {
+        // Its four outlets if not the parenthesis fuck the parenthesis
+        seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(0, -1)));
+        seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(0, 1)));
 
-    this->_segs.push_back(seg);
-    this->_eraseSeg(seg.cords);
+        if ((cord_c != ')') and (cord_c != '(')) { // hot people have four outlets
+            seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(1, 0)));
+            seg.outlets.push_back(std::pair<Cord, Cord>(c, c + Cord(-1, 0)));
+        }
+
+        this->_segs.push_back(seg);
+        this->_eraseSeg(seg.cords);
+    }
 
     // Follow the outlets
     for (int i = 0; i < seg.outlets.size(); i++) {
@@ -428,6 +443,7 @@ void Segmenter::_getMerger(Cord c) {
 
         this->_followPath(start, next, false);
     }
+    
     this->printText();
 }
 
