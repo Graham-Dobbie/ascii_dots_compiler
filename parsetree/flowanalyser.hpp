@@ -1,7 +1,7 @@
 #ifndef FLOWANALYSER_HPP_INCLUDED
 #define FLOWANALYSER_HPP_INCLUDED
 
-#include "parsetree.hpp"
+#include "compiler.hpp"
 
 namespace flowanalyser {
 

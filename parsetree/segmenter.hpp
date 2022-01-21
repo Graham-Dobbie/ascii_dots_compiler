@@ -1,7 +1,7 @@
 #ifndef SEGMENTER_HPP_INCLUDED
 #define SEGMENTER_HPP_INCLUDED
 
-#include "parsetree.hpp"
+#include "compiler.hpp"
 
 namespace segmenter {
 

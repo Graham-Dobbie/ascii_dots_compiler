@@ -1,14 +1,7 @@
 #ifndef PARSETREE_HPP_INCLUDED
 #define PARSETREE_HPP_INCLUDED
 
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-#include <iterator>
-#include <map>
-#include <regex>
-#include <unordered_map>
-#include <vector>
+#include "compiler.hpp"
 
 namespace parsetree {
 
